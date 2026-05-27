@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: CarsTUmotor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: ohio
+    
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        scope: run_and_build
+      - key: DATABASE_URL
+        scope: run_and_build
+        sync: false
+      - key: APP_URL
+        scope: run_and_build
+      - key: MAIL_USERNAME
+        scope: run_and_build
+        sync: false
+      - key: MAIL_PASSWORD
+        scope: run_and_build
+        sync: false
+    
+    buildCommand: npm install && npm run build && composer install --no-dev --optimize-autoloader
+    preDeployCommand: php artisan migrate --force && php artisan cache:clear && php artisan config:cache && php artisan route:cache
+    
+    healthCheckPath: /
+    domains:
+      - carstumotor.onrender.com
