@@ -13,7 +13,9 @@ services:
       - key: APP_KEY
         sync: false
       - key: APP_URL
-        value: https://carstumotor.onrender.com
+        value: https://carstumotor-eybt.onrender.com
+      - key: ASSET_URL
+        value: https://carstumotor-eybt.onrender.com
       - key: DB_CONNECTION
         value: pgsql
       # IMPORTANTE: DATABASE_URL sobrescribe DB_HOST en Laravel. Debe ser host DIRECTO (sin -pooler) para evitar 25P02 con pgbouncer. Actualiza en Render Dashboard.
