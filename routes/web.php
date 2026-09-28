@@ -87,15 +87,24 @@ Route::middleware('auth')->group(function () {
         return view('auth.verify-email');
     })->name('verification.notice');
 
-    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-        if ($request->user()->hasVerifiedEmail()) {
+    Route::get('/email/verify/{id}/{hash}', function (Illuminate\Http\Request $request, string $id, string $hash) {
+        $user = $request->user();
+        if (!$user || (string) $user->getKey() !== (string) $id) {
+            return redirect()->route('verification.notice')->withErrors(['email' => 'Enlace inválido.']);
+        }
+        if ($user->hasVerifiedEmail()) {
             return redirect('/catalogo')->with('verified', true);
         }
-        try {
-            $request->fulfill();
-        } catch (\Throwable $e) {
-            \Log::warning('Error al verificar email: '.$e->getMessage(), ['user_id' => $request->user()->id ?? null]);
+        if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return redirect()->route('verification.notice')->withErrors(['email' => 'Enlace inválido o expirado. Solicita uno nuevo.']);
+        }
+        // Verificar firma manualmente ya lo hace middleware signed, pero si falla será 403 automático
+        try {
+            $user->markEmailAsVerified();
+            event(new Illuminate\Auth\Events\Verified($user));
+        } catch (\Throwable $e) {
+            \Log::warning('Error al verificar email: '.$e->getMessage(), ['user_id' => $user->id ?? null]);
+            return redirect()->route('verification.notice')->withErrors(['email' => 'No se pudo verificar. Solicita uno nuevo.']);
         }
         return redirect('/catalogo')->with('verified', true);
     })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
