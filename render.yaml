@@ -11,22 +11,38 @@ services:
       - key: APP_DEBUG
         value: false
       - key: APP_KEY
-        scope: run_and_build
-      - key: DATABASE_URL
-        scope: run_and_build
         sync: false
       - key: APP_URL
-        scope: run_and_build
+        value: https://carstumotor.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: ep-aged-wildflower-apjbh3lt-pooler.c-7.us-east-1.aws.neon.tech
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: neondb
+      - key: DB_USERNAME
+        value: neondb_owner
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
       - key: MAIL_USERNAME
-        scope: run_and_build
         sync: false
       - key: MAIL_PASSWORD
-        scope: run_and_build
         sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
     
-    buildCommand: npm install && npm run build && composer install --no-dev --optimize-autoloader
-    preDeployCommand: php artisan migrate --force && php artisan cache:clear && php artisan config:cache && php artisan route:cache
+    # Dockerfile multi-stage ya hace composer install + npm build; no duplicar
+    buildCommand: ""
+    preDeployCommand: php artisan migrate --force --no-interaction
     
-    healthCheckPath: /
+    healthCheckPath: /up
     domains:
       - carstumotor.onrender.com

@@ -27,9 +27,9 @@
         gap: 0.5rem;
         text-decoration: none;
     }
-    .logo i { color: #ff6b35; font-size: 2rem; }
+    .logo i { color: #14b8a6; font-size: 2rem; }
     .logo span {
-        background: linear-gradient(135deg, #ff6b35, #ff9f1c);
+        background: linear-gradient(135deg, #14b8a6, #fbbf24);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -131,15 +131,15 @@
         gap: 1rem;
         margin-bottom: 1.25rem;
     }
-    .toolbar h2 { font-size: 1.35rem; color: #1a1a2e; }
+    .toolbar h2 { font-size: 1.35rem; color: #0f172a; }
     .btn-action {
         padding: 0.85rem 1.2rem;
-        background: linear-gradient(135deg, #ff6b35, #ff9f1c);
-        color: #fff;
+        background: linear-gradient(135deg, #14b8a6, #fbbf24);
+        color: #0f172a;
         border: none;
         border-radius: 10px;
         font-size: 1rem;
-        font-weight: 700;
+        font-weight: 800;
         cursor: pointer;
         transition: all 0.3s ease;
         display: inline-flex;
@@ -150,7 +150,7 @@
     }
     .btn-action:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(255, 107, 53, 0.25);
+        box-shadow: 0 10px 30px rgba(20, 184, 166, 0.25);
     }
     .btn-ghost {
         padding: 0.65rem 1rem;
@@ -255,7 +255,7 @@
         gap: 0.6rem;
         padding: 0.5rem 0;
     }
-    .check-row input { width: auto; accent-color: #ff6b35; }
+    .check-row input { width: auto; accent-color: #14b8a6; }
     .form-actions {
         margin-top: 1.5rem;
         display: flex;

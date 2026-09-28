@@ -4,23 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Administración') — carsTUmotor</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/user-nav.css') }}">
     @include('layouts.partials.admin-theme-styles')
 </head>
-<body>
+<body class="min-h-screen bg-zinc-50">
     @include('partials.site-nav')
-
-    @if (session('success'))
-        <div class="admin-main" style="padding-bottom: 0;">
-            <div class="flash-banner">
-                <div class="flash success" role="status">
-                    <i class="fas fa-circle-check"></i>
-                    <span>{{ session('success') }}</span>
-                </div>
-            </div>
-        </div>
-    @endif
+    @include('partials.flash')
 
     <header class="page-header">
         <div class="header-inner">
