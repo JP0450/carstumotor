@@ -16,12 +16,11 @@ services:
         value: https://carstumotor.onrender.com
       - key: DB_CONNECTION
         value: pgsql
+      # IMPORTANTE: DATABASE_URL sobrescribe DB_HOST en Laravel. Debe ser host DIRECTO (sin -pooler) para evitar 25P02 con pgbouncer. Actualiza en Render Dashboard.
       - key: DATABASE_URL
         sync: false
-      - key: DB_CONNECTION
-        value: pgsql
       - key: DB_HOST
-        value: ep-aged-wildflower-apjbh3lt-pooler.c-7.us-east-1.aws.neon.tech
+        value: ep-aged-wildflower-apjbh3lt.c-7.us-east-1.aws.neon.tech
       - key: DB_PORT
         value: 5432
       - key: DB_DATABASE
