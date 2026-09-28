@@ -110,6 +110,11 @@ Route::middleware('auth')->group(function () {
 
         return back()->with('status', 'verification-link-sent');
     })->middleware(['throttle:6,1'])->name('verification.send');
+
+    // Si alguien entra por GET a /email/verification-notification (ej. recarga), redirigir a /email/verify sin 405/500
+    Route::get('/email/verification-notification', function () {
+        return redirect()->route('verification.notice');
+    })->middleware(['throttle:6,1']);
 });
 
 Route::middleware(['auth', 'role:jefe,contador'])
