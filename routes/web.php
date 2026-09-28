@@ -26,8 +26,51 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'registerWeb']);
 });
 
-Route::get('/forgot-password', function () {
-    return view('auth.forgot-password');
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', function () {
+        return view('auth.forgot-password');
+    })->name('password.request');
+
+    Route::post('/forgot-password', function (Illuminate\Http\Request $request) {
+        $request->validate(['email' => 'required|email']);
+        try {
+            $status = Illuminate\Support\Facades\Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $e) {
+            \Log::warning('No se pudo enviar reset: '.$e->getMessage(), ['email' => $request->email]);
+            return back()->with('status', 'Si tu email existe en nuestra base, recibirás un enlace. Revisa también spam.');
+        }
+        return $status === Illuminate\Support\Facades\Password::RESET_LINK_SENT
+            ? back()->with('status', __($status))
+            : back()->withErrors(['email' => __($status)]);
+    })->name('password.email');
+
+    Route::get('/reset-password/{token}', function (string $token) {
+        return view('auth.reset-password', ['token' => $token, 'email' => request('email')]);
+    })->name('password.reset');
+
+    Route::post('/reset-password', function (Illuminate\Http\Request $request) {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => ['required', 'string', 'min:8', 'confirmed', Illuminate\Validation\Rules\Password::min(8)->letters()->numbers()->symbols()],
+        ]);
+        try {
+            $status = Illuminate\Support\Facades\Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user, $password) {
+                    $user->forceFill(['password' => Illuminate\Support\Facades\Hash::make($password)])->setRememberToken(Illuminate\Support\Str::random(60));
+                    $user->save();
+                    event(new Illuminate\Auth\Events\PasswordReset($user));
+                }
+            );
+        } catch (\Throwable $e) {
+            \Log::error('Error al resetear password: '.$e->getMessage());
+            return back()->withErrors(['email' => 'No se pudo restablecer. Intenta de nuevo.']);
+        }
+        return $status === Illuminate\Support\Facades\Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('status', __($status))
+            : back()->withErrors(['email' => [__($status)]]);
+    })->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {
@@ -45,13 +88,25 @@ Route::middleware('auth')->group(function () {
     })->name('verification.notice');
 
     Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-        $request->fulfill();
-
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect('/catalogo')->with('verified', true);
+        }
+        try {
+            $request->fulfill();
+        } catch (\Throwable $e) {
+            \Log::warning('Error al verificar email: '.$e->getMessage(), ['user_id' => $request->user()->id ?? null]);
+            return redirect()->route('verification.notice')->withErrors(['email' => 'Enlace inválido o expirado. Solicita uno nuevo.']);
+        }
         return redirect('/catalogo')->with('verified', true);
-    })->middleware(['signed'])->name('verification.verify');
+    })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
 
     Route::post('/email/verification-notification', function (Request $request) {
-        $request->user()->sendEmailVerificationNotification();
+        try {
+            $request->user()->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            \Log::warning('No se pudo reenviar verificación: '.$e->getMessage(), ['user_id' => $request->user()->id]);
+            return back()->with('status', 'verification-link-sent')->with('warning', 'Si el correo no llega, verifica la configuración SMTP.');
+        }
 
         return back()->with('status', 'verification-link-sent');
     })->middleware(['throttle:6,1'])->name('verification.send');

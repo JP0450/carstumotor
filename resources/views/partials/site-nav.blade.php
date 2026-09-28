@@ -35,7 +35,7 @@
                         </div>
                     </div>
                     @unless($u->hasVerifiedEmail())
-                        <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 font-bold text-amber-900" href="/email/verify"><i class="fas fa-envelope-circle-check"></i> Verificar correo</a>
+                        <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 font-bold text-amber-900" href="{{ route('verification.notice') }}"><i class="fas fa-envelope-circle-check"></i> Verificar correo</a>
                     @endunless
                     <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="/catalogo"><i class="fas fa-layer-group text-teal-600 w-4 text-center"></i> Catálogo</a>
                     <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('profile.show') }}"><i class="fas fa-user-circle text-teal-600 w-4"></i> Mi perfil</a>

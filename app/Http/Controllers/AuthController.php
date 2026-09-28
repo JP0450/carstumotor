@@ -92,9 +92,13 @@ class AuthController extends Controller
     {
         $user = $this->authService->register($request->validated());
         $this->authService->loginUser($user);
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            \Log::warning('No se pudo enviar verificación: '.$e->getMessage(), ['user_id' => $user->id]);
+        }
 
-        return redirect('/email/verify');
+        return redirect('/email/verify')->with('status', 'verification-link-sent');
     }
 
     public function logoutWeb(Request $request): RedirectResponse

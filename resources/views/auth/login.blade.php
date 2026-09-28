@@ -37,11 +37,11 @@
                 </label>
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <label class="inline-flex items-center gap-2 font-bold text-zinc-600"><input type="checkbox" name="remember" class="accent-teal-600"> Recordarme</label>
-                    <a href="/forgot-password" class="font-black text-teal-700 hover:underline">Olvidé mi contraseña</a>
+                    <a href="{{ route('password.request') }}" class="font-black text-teal-700 hover:underline">Olvidé mi contraseña</a>
                 </div>
                 <button type="submit" class="w-full inline-flex justify-center items-center gap-2 py-3 rounded-xl bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black shadow"><i class="fas fa-arrow-right"></i> Entrar</button>
                 <div class="flex items-center gap-3 text-zinc-400 text-sm font-bold"><span class="h-px flex-1 bg-zinc-200"></span>o<span class="h-px flex-1 bg-zinc-200"></span></div>
-                <p class="text-sm text-zinc-600 font-medium bg-amber-50 border border-amber-200 rounded-xl p-3">Si no tenés cuenta, creala en <a href="/register" class="font-black text-teal-700">Registrarse</a>.</p>
+                <p class="text-sm text-zinc-600 font-medium bg-amber-50 border border-amber-200 rounded-xl p-3">Si no tenés cuenta, creala en <a href="{{ route('register') }}" class="font-black text-teal-700">Registrarse</a>.</p>
             </form>
         </div>
     </div>
