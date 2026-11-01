@@ -100,6 +100,7 @@ Si un indicador aparece en cero después de cambiar periodo o moneda, prueba `Me
 
 ## 7. Solución de problemas
 
+- **El dashboard sigue mostrando valores vacíos después de actualizar el proyecto:** detén el servidor con `Ctrl+C`, vuelve a ejecutar `run-demo.ps1` para cargar los datos demo y recarga el navegador con `Ctrl+F5`. Confirma que el rango incluya las fechas de los movimientos.
 - **El navegador muestra una página vacía o datos antiguos:** confirma que la dirección use el puerto actual que anunció el script (8001 o el puerto alternativo), inicia sesión de nuevo y recarga la página.
 - **El puerto 8001 no abre:** revisa que la ventana de PowerShell siga mostrando `Server running`. Si otro proceso lo ocupa, prueba `-Port 8002`.
 - **La contraseña no funciona:** usa la contraseña impresa por la ejecución actual del script; cambia al volverlo a iniciar.

@@ -12,6 +12,7 @@ use App\Services\FinanzaService;
 use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -399,6 +400,34 @@ class DemoVehicleModulesTest extends TestCase
         $this->assertStringContainsString('Ingresos COP', $csv);
         $this->assertStringContainsString(';2500;', $csv);
         $this->assertStringNotContainsString('Dato confidencial de cliente', $csv);
+    }
+
+    public function test_manager_dashboard_includes_sqlite_datetime_values_on_the_period_end_date(): void
+    {
+        $vehicle = $this->createVehicle(['marca' => 'Kia']);
+        $fecha = now()->toDateString().' 00:00:00';
+
+        foreach ([
+            ['tipo' => 'ingreso', 'monto' => 500, 'categoria' => 'Servicio', 'vehiculo_id' => null],
+            ['tipo' => 'ingreso', 'monto' => 1500, 'categoria' => 'Venta de vehículo', 'vehiculo_id' => $vehicle->id],
+            ['tipo' => 'costo_venta', 'monto' => 700, 'categoria' => 'Costo de venta', 'vehiculo_id' => $vehicle->id],
+        ] as $movimiento) {
+            DB::table('transacciones_financieras')->insert($movimiento + [
+                'moneda' => 'COP',
+                'descripcion' => 'Movimiento demo con fecha y hora',
+                'fecha' => $fecha,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $dashboard = app(DashboardGerencialService::class)->obtenerDashboard('mes_actual');
+
+        $this->assertSame(2000.0, $dashboard['kpis']['ingresos']['valor']);
+        $this->assertSame(1300.0, $dashboard['kpis']['utilidad_neta']['valor']);
+        $this->assertSame(1, $dashboard['kpis']['vehiculos_vendidos']['valor']);
+        $this->assertSame([1], $dashboard['finanzas']['ventas']['cantidades']);
+        $this->assertSame(['Kia'], $dashboard['finanzas']['rentabilidadMarcas']['labels']);
     }
 
     public function test_manager_dashboard_rejects_invalid_or_incomplete_date_filters(): void

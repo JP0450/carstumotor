@@ -429,7 +429,9 @@ class DemoDataSeeder extends Seeder
         for ($offset = 5; $offset >= 0; $offset--) {
             $month = now()->startOfMonth()->subMonths($offset);
             foreach ($monthlyTypes as $index => [$type, $description]) {
-                $date = $month->copy()->addDays(4 + $index * 7);
+                $date = $offset === 0
+                    ? now()->toDateString()
+                    : $month->copy()->addDays(4 + $index * 7)->toDateString();
                 TransaccionFinanciera::updateOrCreate(
                     ['descripcion' => $description.' - '.$month->format('Y-m')],
                     [
@@ -438,7 +440,7 @@ class DemoDataSeeder extends Seeder
                         'monto' => [185000000, 24500000, 12700000][$index] + ($offset * 350000),
                         'moneda' => 'COP',
                         'vehiculo_id' => null,
-                        'fecha' => $date->toDateString(),
+                        'fecha' => $date,
                         'categoria' => 'DEMO | '.ucfirst(str_replace('_', ' ', $type)),
                     ]
                 );
@@ -496,7 +498,7 @@ class DemoDataSeeder extends Seeder
                 'monto' => 158000000,
                 'moneda' => 'COP',
                 'vehiculo_id' => $sportage->id,
-                'fecha' => now()->subDays(3)->toDateString(),
+                'fecha' => now()->toDateString(),
                 'categoria' => 'Venta de vehículo',
             ]
         );
@@ -509,7 +511,7 @@ class DemoDataSeeder extends Seeder
                 'monto' => 132000000,
                 'moneda' => 'COP',
                 'vehiculo_id' => $sportage->id,
-                'fecha' => now()->subDays(3)->toDateString(),
+                'fecha' => now()->toDateString(),
                 'categoria' => 'Costo de venta',
             ]
         );

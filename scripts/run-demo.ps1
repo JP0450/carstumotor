@@ -11,6 +11,7 @@ $phpRoot = Split-Path -Parent $php
 $extensionsToLoad = @()
 $temporaryIniDirectory = $null
 $originalIniScanDirectory = $env:PHP_INI_SCAN_DIR
+$originalAppTimezone = $env:APP_TIMEZONE
 $phpModules = & $php -m
 if ($LASTEXITCODE -ne 0) {
     throw 'No se pudo consultar la instalación de PHP.'
@@ -54,6 +55,7 @@ if ([string]::IsNullOrWhiteSpace($originalIniScanDirectory)) {
 }
 
 $env:APP_ENV = 'local'
+$env:APP_TIMEZONE = 'America/Bogota'
 $env:DB_CONNECTION = 'sqlite'
 $env:DB_DATABASE = Join-Path $projectRoot 'database\presentation.sqlite'
 $env:DB_URL = ''
@@ -96,6 +98,7 @@ try {
     exit $LASTEXITCODE
 } finally {
     $env:PHP_INI_SCAN_DIR = $originalIniScanDirectory
+    $env:APP_TIMEZONE = $originalAppTimezone
     if ($temporaryIniDirectory -and (Test-Path $temporaryIniDirectory)) {
         Remove-Item -LiteralPath $temporaryIniDirectory -Recurse -Force
     }

@@ -166,7 +166,8 @@ class DashboardGerencialService
     private function transaccionesAgregadas(CarbonImmutable $inicio, CarbonImmutable $fin): Collection
     {
         return TransaccionFinanciera::query()
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->whereDate('fecha', '>=', $inicio->toDateString())
+            ->whereDate('fecha', '<=', $fin->toDateString())
             ->select('tipo', 'fecha', 'moneda')
             ->selectRaw('SUM(monto) AS total, COUNT(*) AS cantidad')
             ->groupBy('tipo', 'fecha', 'moneda')
@@ -206,7 +207,8 @@ class DashboardGerencialService
             ->where('categoria', 'Venta de vehículo')
             ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->whereDate('fecha', '>=', $inicio->toDateString())
+            ->whereDate('fecha', '<=', $fin->toDateString())
             ->get(['vehiculo_id', 'fecha'])
             ->groupBy(fn (TransaccionFinanciera $venta): string => CarbonImmutable::parse($venta->fecha)->format('Y-m'))
             ->map(fn (Collection $ventasMes): int => $ventasMes->pluck('vehiculo_id')->unique()->count());
@@ -233,7 +235,8 @@ class DashboardGerencialService
             ->where('categoria', 'Venta de vehículo')
             ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->whereDate('fecha', '>=', $inicio->toDateString())
+            ->whereDate('fecha', '<=', $fin->toDateString())
             ->selectRaw('vehiculo_id, SUM(monto) AS total')
             ->groupBy('vehiculo_id')
             ->get()
@@ -242,7 +245,8 @@ class DashboardGerencialService
             ->where('tipo', 'costo_venta')
             ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->whereDate('fecha', '>=', $inicio->toDateString())
+            ->whereDate('fecha', '<=', $fin->toDateString())
             ->selectRaw('vehiculo_id, SUM(monto) AS total')
             ->groupBy('vehiculo_id')
             ->pluck('total', 'vehiculo_id');
