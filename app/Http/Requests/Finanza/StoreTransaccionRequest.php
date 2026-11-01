@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Finanza;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTransaccionRequest extends FormRequest
 {
@@ -16,6 +17,8 @@ class StoreTransaccionRequest extends FormRequest
         return [
             'tipo' => ['required', 'string', 'in:ingreso,gasto,impuesto,costo_venta,cuenta_por_pagar,cuenta_por_cobrar'],
             'monto' => ['required', 'numeric', 'min:0'],
+            'moneda' => ['required', Rule::in(['COP', 'USD', 'EUR'])],
+            'vehiculo_id' => ['nullable', 'integer', 'exists:vehiculos,id'],
             'descripcion' => ['required', 'string', 'min:5', 'max:500'],
             'fecha' => ['required', 'date'],
             'categoria' => ['required', 'string', 'max:50'],

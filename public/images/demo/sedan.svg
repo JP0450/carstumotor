@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Ilustración de automóvil sedán de demostración">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#172033"/><stop offset="1" stop-color="#090d16"/></linearGradient>
+    <linearGradient id="body" x2="0" y2="1"><stop stop-color="#e6e9ef"/><stop offset="1" stop-color="#8f9aac"/></linearGradient>
+    <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#b9d8e6"/><stop offset="1" stop-color="#334c60"/></linearGradient>
+  </defs>
+  <rect width="720" height="400" rx="28" fill="url(#bg)"/>
+  <circle cx="564" cy="82" r="115" fill="#ffffff" opacity=".035"/>
+  <path d="M92 292h536" stroke="#718096" stroke-opacity=".35" stroke-width="3"/>
+  <ellipse cx="360" cy="303" rx="240" ry="22" fill="#000" opacity=".4"/>
+  <path d="M143 272l19-43q13-25 43-34l103-15 58-67q13-14 35-14h83q25 0 42 21l50 63 42 18q24 10 29 34l8 37q2 15-15 19H148q-20-2-5-19z" fill="url(#body)" stroke="#f8fafc" stroke-opacity=".42" stroke-width="3"/>
+  <path d="M300 190l54-62q7-8 22-8h36v71zm125-70h58q15 0 24 12l44 58H425z" fill="url(#glass)" stroke="#e2e8f0" stroke-opacity=".45" stroke-width="3"/>
+  <path d="M152 254h47m327 0h61" stroke="#243449" stroke-width="8" stroke-linecap="round"/>
+  <path d="M160 246h40m348 0h42" stroke="#f8fafc" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="238" cy="281" r="37" fill="#080b10"/><circle cx="238" cy="281" r="20" fill="#aeb7c4"/><circle cx="238" cy="281" r="8" fill="#293344"/>
+  <circle cx="519" cy="281" r="37" fill="#080b10"/><circle cx="519" cy="281" r="20" fill="#aeb7c4"/><circle cx="519" cy="281" r="8" fill="#293344"/>
+  <text x="34" y="46" fill="#b9c3d3" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">CARSTUMOTOR · DEMO</text>
+</svg>

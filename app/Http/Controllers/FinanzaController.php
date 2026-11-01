@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Finanza\StoreTransaccionRequest;
+use App\Models\TransaccionFinanciera;
 use App\Services\FinanzaService;
+use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class FinanzaController extends Controller
 {
     public function __construct(
         private FinanzaService $finanzaService,
-        private \App\Services\ReportService $reportService
+        private ReportService $reportService
     ) {}
 
     public function storeTransaccion(StoreTransaccionRequest $request): JsonResponse
@@ -22,6 +25,31 @@ class FinanzaController extends Controller
         $transaccion = $this->finanzaService->registrarTransaccion($data);
 
         return response()->json($transaccion, 201);
+    }
+
+    public function listarTransacciones(Request $request): JsonResponse
+    {
+        $filtros = $request->validate([
+            'tipo' => ['nullable', 'string', 'in:ingreso,gasto,impuesto,costo_venta,cuenta_por_pagar,cuenta_por_cobrar'],
+            'fecha_inicio' => ['nullable', 'date'],
+            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+        ]);
+
+        return response()->json($this->finanzaService->listarMovimientos($filtros));
+    }
+
+    public function updateTransaccion(StoreTransaccionRequest $request, TransaccionFinanciera $transaccion): JsonResponse
+    {
+        $transaccion = $this->finanzaService->actualizarTransaccion($transaccion, $request->validated());
+
+        return response()->json($transaccion);
+    }
+
+    public function destroyTransaccion(TransaccionFinanciera $transaccion): JsonResponse
+    {
+        $this->finanzaService->eliminarTransaccion($transaccion);
+
+        return response()->json(null, 204);
     }
 
     public function listarInformes(): JsonResponse
@@ -36,11 +64,13 @@ class FinanzaController extends Controller
         $request->validate([
             'inicio' => ['required', 'date'],
             'fin' => ['required', 'date', 'after_or_equal:inicio'],
+            'moneda' => ['nullable', Rule::in(['COP', 'USD', 'EUR'])],
         ]);
 
         $flujo = $this->finanzaService->obtenerFlujoCaja(
             $request->input('inicio'),
-            $request->input('fin')
+            $request->input('fin'),
+            $request->input('moneda')
         );
 
         return response()->json($flujo);
@@ -51,11 +81,13 @@ class FinanzaController extends Controller
         $request->validate([
             'inicio' => ['required', 'date'],
             'fin' => ['required', 'date', 'after_or_equal:inicio'],
+            'moneda' => ['nullable', Rule::in(['COP', 'USD', 'EUR'])],
         ]);
 
         $estado = $this->finanzaService->obtenerEstadoResultados(
             $request->input('inicio'),
-            $request->input('fin')
+            $request->input('fin'),
+            $request->input('moneda')
         );
 
         return response()->json($estado);
@@ -98,12 +130,20 @@ class FinanzaController extends Controller
         $request->validate([
             'inicio' => ['required', 'date'],
             'fin' => ['required', 'date', 'after_or_equal:inicio'],
+            'moneda' => ['nullable', Rule::in(['COP', 'USD', 'EUR'])],
         ]);
 
         $inicio = $request->input('inicio');
         $fin = $request->input('fin');
 
-        $estado = $this->finanzaService->obtenerEstadoResultados($inicio, $fin);
+        $estado = $this->finanzaService->obtenerEstadoResultados($inicio, $fin, $request->input('moneda'));
+        if ($estado['ingresos'] === null) {
+            return response()->json([
+                'message' => 'Selecciona una moneda para generar un informe sin mezclar divisas.',
+                'por_moneda' => $estado['por_moneda'],
+                'registros_sin_moneda' => $estado['registros_sin_moneda'],
+            ], 422);
+        }
 
         // Transformar a líneas simples para la plantilla PDF
         $lines = [
@@ -114,7 +154,7 @@ class FinanzaController extends Controller
             ['name' => 'Utilidad neta', 'debit' => $estado['utilidad_neta'] ?? 0, 'credit' => ''],
         ];
 
-        $period = sprintf("%s - %s", $inicio, $fin);
+        $period = sprintf('%s - %s · %s', $inicio, $fin, $estado['moneda'] ?? 'sin moneda');
 
         return $this->reportService->generatePdf('pdfs.reporte-financiero', [
             'lines' => $lines,

@@ -17,6 +17,19 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 - Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
 - Database agnostic [schema migrations](https://laravel.com/docs/migrations).
 - [Robust background job processing](https://laravel.com/docs/queues).
+
+## Modo de demostración local
+
+En Windows, ejecuta `powershell -ExecutionPolicy Bypass -File .\scripts\run-demo.ps1`. El script prepara una base SQLite aislada en `database\presentation.sqlite`, aplica las migraciones, agrega datos de ejemplo sin borrar registros y levanta el servidor en `http://127.0.0.1:8001`. La configuración de `.env` y la base de datos configurada allí no se usan para esta demostración.
+
+El script muestra una contraseña temporal aleatoria para estas cuentas locales:
+
+- `demo.jefe@carstumotor.test`
+- `demo.contador@carstumotor.test`
+- `demo.internacional@carstumotor.test`
+- `demo.cliente@carstumotor.test`
+
+Los registros y documentos se identifican como DEMO. Se incluyen ocho vehículos de muestra con ilustraciones SVG locales y livianas (no fotografías de modelos reales), y un egreso de transporte de COP 18.500.000 asociado al BMW M4 de demostración. Los movimientos nuevos guardan moneda y vehículo opcional; los registros históricos sin moneda se conservan como desconocidos. Vuelve a ejecutar el script para levantar la demostración; los datos se conservan y no se duplican.
 - [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.

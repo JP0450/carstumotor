@@ -39,10 +39,12 @@
                     @endunless
                     <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="/catalogo"><i class="fas fa-layer-group text-teal-600 w-4 text-center"></i> Catálogo</a>
                     <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('profile.show') }}"><i class="fas fa-user-circle text-teal-600 w-4"></i> Mi perfil</a>
+                    <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('admin.dashboard.gerencial') }}"><i class="fas fa-chart-line text-teal-600 w-4"></i> Dashboard gerencial</a>
+                    <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('finanzas.index') }}"><i class="fas fa-coins text-teal-600 w-4"></i> Finanzas y contabilidad</a>
+                    <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('internacional.vehiculos.index') }}"><i class="fas fa-globe text-teal-600 w-4"></i> Comercio internacional</a>
                     @php $isAdmin = in_array(strtolower(trim($u->role ?? '')), [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_CONTADOR], true); @endphp
                     @if($isAdmin)
                         <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('admin.vehiculos.index') }}"><i class="fas fa-clipboard-list text-teal-600 w-4"></i> Gestionar vehículos</a>
-                        <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="{{ route('admin.dashboard.contador') }}"><i class="fas fa-chart-line text-teal-600 w-4"></i> Dashboard</a>
                     @endif
                     <a class="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-zinc-50 font-bold text-slate-800" href="/"><i class="fas fa-house text-teal-600 w-4"></i> Inicio</a>
                     <div class="pt-1.5 mt-1 border-t border-zinc-100">

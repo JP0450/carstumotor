@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     @include('layouts.partials.admin-theme-styles')
 </head>
-<body class="min-h-screen bg-zinc-50">
+<body class="min-h-screen bg-zinc-50 @yield('body_class')">
     @include('partials.site-nav')
     @include('partials.flash')
 

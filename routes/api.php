@@ -23,8 +23,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
+    Route::get('/finanzas/transacciones', [FinanzaController::class, 'listarTransacciones']);
+    Route::post('/finanzas/transacciones', [FinanzaController::class, 'storeTransaccion']);
+    Route::put('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'updateTransaccion']);
+    Route::delete('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'destroyTransaccion']);
+
     // Usuario Externo
-    Route::middleware('role:' . User::ROLE_EXTERNO)->group(function () {
+    Route::middleware('role:'.User::ROLE_EXTERNO)->group(function () {
         Route::get('/vehiculos', [VehiculoController::class, 'index']);
         Route::get('/vehiculos/buscar', [VehiculoController::class, 'search']);
         Route::get('/vehiculos/{id}', [VehiculoController::class, 'show']);
@@ -35,13 +40,13 @@ Route::middleware('auth')->group(function () {
     });
 
     // KPIs (utilidades netas, impuestos, márgenes): jefe y contador / finanzas
-    Route::middleware('role:' . User::ROLE_JEFE . ',' . User::ROLE_CONTADOR)->group(function () {
+    Route::middleware('role:'.User::ROLE_JEFE.','.User::ROLE_CONTADOR)->group(function () {
         Route::get('/dashboard/ejecutivo', [DashboardController::class, 'ejecutivo']);
     });
 
     // Profesional negocios internacionales: logística y seguimiento interno (pedidos, archivos).
     // No incluye CRUD del catálogo público de vehículos que consume el cliente (externo).
-    Route::middleware('role:' . User::ROLE_NEGOCIOS)->group(function () {
+    Route::middleware('role:'.User::ROLE_NEGOCIOS)->group(function () {
         Route::post('/pedidos', [PedidoController::class, 'store']);
         Route::get('/pedidos', [PedidoController::class, 'index']);
         Route::patch('/pedidos/{id}/progreso', [PedidoController::class, 'updateProgress']);
@@ -50,8 +55,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Contador / finanzas: transacciones, informes tipo NIIF / DIAN (vía informes y estados financieros)
-    Route::middleware('role:' . User::ROLE_CONTADOR)->group(function () {
-        Route::post('/finanzas/transacciones', [FinanzaController::class, 'storeTransaccion']);
+    Route::middleware('role:'.User::ROLE_CONTADOR)->group(function () {
         Route::get('/finanzas/informes', [FinanzaController::class, 'listarInformes']);
         Route::post('/finanzas/informes', [FinanzaController::class, 'subirInforme']);
         Route::get('/finanzas/flujo-caja', [FinanzaController::class, 'flujoCaja']);
@@ -61,7 +65,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Inventario físico / stock: jefe y contador
-    Route::middleware('role:' . User::ROLE_JEFE . ',' . User::ROLE_CONTADOR)->group(function () {
+    Route::middleware('role:'.User::ROLE_JEFE.','.User::ROLE_CONTADOR)->group(function () {
         Route::get('/inventario', [InventarioController::class, 'index']);
         Route::post('/inventario', [InventarioController::class, 'store']);
         Route::put('/inventario/{id}', [InventarioController::class, 'updateStock']);
@@ -70,14 +74,14 @@ Route::middleware('auth')->group(function () {
     });
 
     // Catálogo público (autos que ve el cliente / externo): alta y edición solo jefe y contador
-    Route::middleware('role:' . User::ROLE_JEFE . ',' . User::ROLE_CONTADOR)->group(function () {
+    Route::middleware('role:'.User::ROLE_JEFE.','.User::ROLE_CONTADOR)->group(function () {
         Route::post('/vehiculos', [VehiculoController::class, 'store']);
         Route::put('/vehiculos/{id}', [VehiculoController::class, 'update']);
         Route::delete('/vehiculos/{id}', [VehiculoController::class, 'destroy']);
     });
 
     // Citas pendientes (acceso jefe / admin)
-    Route::middleware('role:' . User::ROLE_JEFE)->group(function () {
+    Route::middleware('role:'.User::ROLE_JEFE)->group(function () {
         Route::get('/citas/pendientes', [CitaController::class, 'pendientes']);
     });
 });

@@ -7,6 +7,7 @@ use App\Services\CatalogoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class VehiculoController extends Controller
 {
@@ -26,6 +27,15 @@ class VehiculoController extends Controller
         }
 
         return view('catalogo', compact('vehiculos'));
+    }
+
+    public function ficha(int $id): View
+    {
+        $vehiculo = $this->catalogoService->obtenerDetalle($id);
+
+        abort_unless($vehiculo && $vehiculo->disponible, Response::HTTP_NOT_FOUND);
+
+        return view('catalogo.show', compact('vehiculo'));
     }
 
     public function index(): JsonResponse
@@ -61,6 +71,7 @@ class VehiculoController extends Controller
             'marca' => ['required', 'string', 'max:50'],
             'modelo' => ['required', 'string', 'max:50'],
             'color' => ['required', 'string', 'max:30'],
+            'color_secundario' => ['nullable', 'string', 'max:30'],
             'puertas' => ['required', 'integer', 'min:1', 'max:5'],
             'hp' => ['required', 'integer', 'min:1', 'max:100000'],
             'precio_cliente' => ['required', 'numeric', 'min:0'],
@@ -86,6 +97,7 @@ class VehiculoController extends Controller
             'marca' => ['sometimes', 'string', 'max:50'],
             'modelo' => ['sometimes', 'string', 'max:50'],
             'color' => ['sometimes', 'string', 'max:30'],
+            'color_secundario' => ['sometimes', 'nullable', 'string', 'max:30'],
             'puertas' => ['sometimes', 'integer', 'min:1', 'max:5'],
             'hp' => ['sometimes', 'integer', 'min:1', 'max:100000'],
             'precio_cliente' => ['sometimes', 'numeric', 'min:0'],

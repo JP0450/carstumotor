@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehiculo extends Model
@@ -14,6 +15,7 @@ class Vehiculo extends Model
         'marca',
         'modelo',
         'color',
+        'color_secundario',
         'puertas',
         'hp',
         'imagen',
@@ -34,5 +36,20 @@ class Vehiculo extends Model
     public function inventario(): HasOne
     {
         return $this->hasOne(Inventario::class);
+    }
+
+    public function informacionInternacional(): HasOne
+    {
+        return $this->hasOne(VehiculoInformacionInternacional::class);
+    }
+
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(VehiculoDocumento::class);
+    }
+
+    public function transaccionesFinancieras(): HasMany
+    {
+        return $this->hasMany(TransaccionFinanciera::class);
     }
 }

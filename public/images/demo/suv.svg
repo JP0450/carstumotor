@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Ilustración de vehículo SUV de demostración">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#153338"/><stop offset="1" stop-color="#071316"/></linearGradient>
+    <linearGradient id="body" x2="0" y2="1"><stop stop-color="#35b8a7"/><stop offset="1" stop-color="#14675f"/></linearGradient>
+    <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#a8d7dc"/><stop offset="1" stop-color="#284d55"/></linearGradient>
+  </defs>
+  <rect width="720" height="400" rx="28" fill="url(#bg)"/>
+  <circle cx="576" cy="90" r="130" fill="#77e4d7" opacity=".055"/>
+  <path d="M88 298h544" stroke="#8fd3ca" stroke-opacity=".28" stroke-width="3"/>
+  <ellipse cx="360" cy="308" rx="247" ry="22" fill="#000" opacity=".42"/>
+  <path d="M126 270l15-71q6-28 37-34l66-9 48-69q12-17 36-17h149q22 0 39 17l59 65 61 19q30 10 36 42l7 54q1 23-22 28H137q-18-2-11-25z" fill="url(#body)" stroke="#baf7ef" stroke-opacity=".45" stroke-width="3"/>
+  <path d="M270 151l41-61q6-9 22-9h54v78zm133-70h69q15 0 25 12l50 58H403z" fill="url(#glass)" stroke="#d3faf5" stroke-opacity=".43" stroke-width="3"/>
+  <path d="M287 86v81m116-86v87" stroke="#d6fff8" stroke-opacity=".45" stroke-width="3"/>
+  <path d="M139 245h49m376 0h61" stroke="#0a2c2d" stroke-width="9" stroke-linecap="round"/>
+  <path d="M139 237h47m380 0h55" stroke="#d9fff8" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="228" cy="281" r="39" fill="#070b0d"/><circle cx="228" cy="281" r="21" fill="#b7c8c8"/><circle cx="228" cy="281" r="8" fill="#243739"/>
+  <circle cx="527" cy="281" r="39" fill="#070b0d"/><circle cx="527" cy="281" r="21" fill="#b7c8c8"/><circle cx="527" cy="281" r="8" fill="#243739"/>
+  <text x="34" y="46" fill="#b7d4d3" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3">CARSTUMOTOR · DEMO</text>
+</svg>

@@ -33,20 +33,26 @@
                 </div>
             @endif
 
+            <p class="hint">Las sugerencias de marca, modelo y color provienen de vehículos registrados; también puedes escribir valores nuevos.</p>
+
             <form method="post" action="{{ route('admin.vehiculos.store') }}">
                 @csrf
                 <div class="form-grid">
                     <div class="field">
                         <label for="marca">Marca</label>
-                        <input id="marca" name="marca" type="text" value="{{ old('marca') }}" required maxlength="50">
+                        <input id="marca" name="marca" type="text" list="marcas-options" value="{{ old('marca') }}" required maxlength="50">
                     </div>
                     <div class="field">
                         <label for="modelo">Modelo</label>
-                        <input id="modelo" name="modelo" type="text" value="{{ old('modelo') }}" required maxlength="50">
+                        <input id="modelo" name="modelo" type="text" list="modelos-options" value="{{ old('modelo') }}" required maxlength="50">
                     </div>
                     <div class="field">
                         <label for="color">Color</label>
-                        <input id="color" name="color" type="text" value="{{ old('color') }}" required maxlength="30">
+                        <input id="color" name="color" type="text" list="colores-options" value="{{ old('color') }}" required maxlength="30">
+                    </div>
+                    <div class="field">
+                        <label for="color_secundario">Color secundario (opcional)</label>
+                        <input id="color_secundario" name="color_secundario" type="text" list="colores-options" value="{{ old('color_secundario') }}" maxlength="30">
                     </div>
                     <div class="field">
                         <label for="puertas">Puertas</label>
@@ -80,6 +86,7 @@
                         </div>
                     </div>
                 </div>
+                @include('admin.vehiculos.partials.opciones')
                 <div class="form-actions">
                     <button type="submit" class="btn-action">
                         <i class="fas fa-save"></i> Guardar vehículo

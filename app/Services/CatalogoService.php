@@ -30,6 +30,7 @@ class CatalogoService
 
     public function buscar(array $filters): Collection
     {
+        $filters['disponible'] = true;
         $resultados = $this->vehiculoRepository->search($filters);
 
         return $resultados->makeHidden(['costo_empresa']);

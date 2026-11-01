@@ -43,7 +43,11 @@ class VehiculoRepository implements IVehiculoRepository
         $query = Vehiculo::query();
 
         if (isset($filters['marca'])) {
-            $query->where('marca', 'like', '%' . $filters['marca'] . '%');
+            $query->where(function ($query) use ($filters) {
+                $term = '%' . $filters['marca'] . '%';
+                $query->whereRaw('LOWER(marca) LIKE LOWER(?)', [$term])
+                    ->orWhereRaw('LOWER(modelo) LIKE LOWER(?)', [$term]);
+            });
         }
 
         if (isset($filters['color'])) {

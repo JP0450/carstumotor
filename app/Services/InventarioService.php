@@ -22,9 +22,11 @@ class InventarioService
         $existente = $this->inventarioRepository->findByVehiculo($vehiculoId);
 
         if ($existente) {
-            $nuevaCantidad = $existente->cantidad + $cantidad;
-            $this->inventarioRepository->updateStock($existente->id, $nuevaCantidad);
-            $existente->refresh();
+            $data = ['cantidad' => $existente->cantidad + $cantidad];
+            if ($ubicacion !== null) {
+                $data['ubicacion'] = $ubicacion;
+            }
+            $this->inventarioRepository->update($existente, $data);
 
             return $existente;
         }

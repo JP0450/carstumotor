@@ -15,10 +15,7 @@ class AuthService
     public function register(array $data): User
     {
         $data['password'] = Hash::make($data['password']);
-
-        if (!in_array($data['role'] ?? '', User::roles(), true)) {
-            $data['role'] = User::ROLE_EXTERNO;
-        }
+        $data['role'] = User::ROLE_EXTERNO;
 
         return $this->userRepository->create($data);
     }

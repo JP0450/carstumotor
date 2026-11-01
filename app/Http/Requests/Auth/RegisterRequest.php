@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -28,7 +27,7 @@ class RegisterRequest extends FormRequest
                 'confirmed',
             ],
             'phone' => ['nullable', 'string', 'max:20'],
-            'role' => ['nullable', 'string', 'in:' . implode(',', User::roles())],
+            'role' => ['prohibited'],
         ];
     }
 

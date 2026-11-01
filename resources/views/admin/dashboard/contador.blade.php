@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard — Contador')
-@section('page_title', 'Panel del Contador')
-@section('page_subtitle', 'Resumen financiero y herramientas contables — periodo actual')
+@section('title', 'Dashboard financiero — Demostración')
+@section('page_title', 'Panel financiero')
+@section('page_subtitle', 'Ejemplo demostrativo con cifras ficticias')
 
 @section('content')
     <style>
@@ -170,84 +170,26 @@
     <div class="toolbar">
         <h2>Resumen financiero</h2>
         <div>
-            <a href="#" class="btn-ghost">Exportar</a>
-            <a href="{{ route('admin.vehiculos.index') }}" class="btn-ghost">Vehículos</a>
+            <a href="{{ route('catalogo') }}" class="btn-ghost">Catálogo</a>
+            <a href="{{ route('internacional.vehiculos.index') }}" class="btn-ghost">Comercio internacional</a>
         </div>
     </div>
 
-    <div class="report-actions" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; margin-bottom:1.5rem;">
-        <form method="GET" action="{{ route('admin.finanzas.reporte.pdf') }}" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
-            <label style="display:flex; flex-direction:column; font-size:0.9rem; color:#334155;">
-                Inicio
-                <input type="date" name="inicio" value="{{ now()->startOfMonth()->toDateString() }}" style="border:1px solid #cbd5e1; border-radius:8px; padding:0.5rem;" />
-            </label>
-            <label style="display:flex; flex-direction:column; font-size:0.9rem; color:#334155;">
-                Fin
-                <input type="date" name="fin" value="{{ now()->endOfMonth()->toDateString() }}" style="border:1px solid #cbd5e1; border-radius:8px; padding:0.5rem;" />
-            </label>
-            <button type="submit" class="btn btn-primary" style="padding:0.75rem 1.2rem;">Descargar reporte PDF</button>
-        </form>
-        <span style="color:#64748b; font-size:0.95rem;">Descarga el reporte financiero para el periodo seleccionado.</span>
+    <div role="status" style="padding:0.9rem 1rem; margin-bottom:1.25rem; border:1px solid #fcd34d; border-radius:12px; background:#fffbeb; color:#92400e;">
+        <strong>Modo demostración:</strong> cifras ficticias e ilustrativas en COP; no se guardan ni representan movimientos reales.
     </div>
 
     @php
-        $sampleCostosVentas = 52000;
-        $sampleGastosOperativos = 26000;
-        $sampleImpuestos = 14000;
-        $sampleIngresos = 150000;
-        $sampleUtilidadBruta = 45000;
-        $sampleUtilidadOperativa = 19000;
-        $sampleUtilidadNeta = 7000;
-
-        $costosVentas = $estado['costos_ventas'] > 0 ? $estado['costos_ventas'] : $sampleCostosVentas;
-        $gastosOperativos = $estado['gastos_operativos'] > 0 ? $estado['gastos_operativos'] : $sampleGastosOperativos;
-        $impuestos = $estado['impuestos'] > 0 ? $estado['impuestos'] : $sampleImpuestos;
-        $ingresos = $estado['ingresos'] > 0 ? $estado['ingresos'] : $sampleIngresos;
-        $utilidadBruta = $estado['utilidad_bruta'] !== 0 ? $estado['utilidad_bruta'] : $sampleUtilidadBruta;
-        $utilidadOperativa = $estado['utilidad_operativa'] !== 0 ? $estado['utilidad_operativa'] : $sampleUtilidadOperativa;
-        $utilidadNeta = $estado['utilidad_neta'] !== 0 ? $estado['utilidad_neta'] : $sampleUtilidadNeta;
+        $costosVentas = $estado['costos_ventas'];
+        $gastosOperativos = $estado['gastos_operativos'];
+        $impuestos = $estado['impuestos'];
+        $ingresos = $estado['ingresos'];
+        $utilidadBruta = $estado['utilidad_bruta'];
+        $utilidadOperativa = $estado['utilidad_operativa'];
+        $utilidadNeta = $estado['utilidad_neta'];
 
         $gastosTotales = $costosVentas + $gastosOperativos + $impuestos;
-        $valorReal = max($flujo['entradas'], 1);
-        $profitRatio = $flujo['flujo_neto'] / $valorReal * 100;
-
-        $useSampleCostData = ($estado['costos_ventas'] + $estado['gastos_operativos'] + $estado['impuestos']) <= 0;
-        $useSampleProfitData = ($estado['ingresos'] + $gastosTotales + max($estado['utilidad_neta'], 0)) <= 0;
-        $useSampleData = $useSampleCostData || $useSampleProfitData || $cxp->isEmpty() || $cxc->isEmpty() || $informes->isEmpty();
-
-        $cxpDisplay = $cxp->isNotEmpty()
-            ? $cxp
-            : collect([
-                (object)['descripcion' => 'Mantenimiento general', 'monto' => 12000, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-08')],
-                (object)['descripcion' => 'Servicios de consultoría', 'monto' => 7500, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-12')],
-                (object)['descripcion' => 'Pago de energía', 'monto' => 4200, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-14')],
-            ]);
-
-        $cxcDisplay = $cxc->isNotEmpty()
-            ? $cxc
-            : collect([
-                (object)['descripcion' => 'Cliente: AutoExpress', 'monto' => 18500, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-09')],
-                (object)['descripcion' => 'Cliente: MotorPlus', 'monto' => 9800, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-11')],
-                (object)['descripcion' => 'Cliente: RutaSegura', 'monto' => 12600, 'created_at' => \Illuminate\Support\Carbon::parse('2026-05-15')],
-            ]);
-
-        $informesDisplay = $informes->isNotEmpty()
-            ? $informes
-            : collect([
-                (object)['tipo' => 'Balance mensual', 'periodo' => 'Abr 2026', 'ruta' => 'samples/balance_abril.pdf', 'nombre_archivo' => 'Balance_Abril_2026.pdf'],
-                (object)['tipo' => 'Informe de caja', 'periodo' => 'Abr 2026', 'ruta' => 'samples/caja_abril.pdf', 'nombre_archivo' => 'Informe_Caja_2026.pdf'],
-                (object)['tipo' => 'Resumen de impuestos', 'periodo' => 'Abr 2026', 'ruta' => 'samples/impuestos_abril.pdf', 'nombre_archivo' => 'Resumen_Impuestos_2026.pdf'],
-            ]);
     @endphp
-
-    @if($useSampleData)
-        <div class="flash-banner" style="padding:0 1rem; margin-bottom:1rem;">
-            <div class="flash info" role="status" style="border-radius:18px; padding:1rem;">
-                <i class="fas fa-info-circle"></i>
-                <span>Se muestran datos de ejemplo en algunas secciones porque faltan valores reales en el periodo.</span>
-            </div>
-        </div>
-    @endif
 
     <div class="dashboard-grid">
         <div class="dashboard-card">
@@ -276,8 +218,8 @@
         <div class="chart-card">
             <h3>Distribución de costos</h3>
             <canvas id="costBreakdownChart" height="280"></canvas>
-            @if($useSampleCostData)
-                <p style="margin-top:0.75rem; color:#6b7280; font-size:0.95rem;">Mostrando datos de ejemplo porque no hay costos reales cargados aún.</p>
+            @if($costosVentas + $gastosOperativos + $impuestos <= 0)
+                <p style="margin-top:0.75rem; color:#6b7280; font-size:0.95rem;">No hay costos ni gastos registrados para este periodo.</p>
             @endif
             <div class="chart-footer">
                 <div class="chart-pill label-costos"><span></span> Costos de venta</div>
@@ -289,8 +231,8 @@
         <div class="chart-card">
             <h3>Utilidad vs Gastos</h3>
             <canvas id="profitVsExpenseChart" height="280"></canvas>
-            @if($useSampleProfitData)
-                <p style="margin-top:0.75rem; color:#6b7280; font-size:0.95rem;">Mostrando datos de ejemplo porque no existen ingresos y gastos reales en este periodo.</p>
+            @if($ingresos + $gastosTotales <= 0)
+                <p style="margin-top:0.75rem; color:#6b7280; font-size:0.95rem;">No hay ingresos ni gastos registrados para este periodo.</p>
             @endif
             <div class="chart-list">
                 <div class="chart-summary">
@@ -335,13 +277,15 @@
                     <tr><th>Descripción</th><th>Monto</th><th>Fecha</th></tr>
                 </thead>
                 <tbody>
-                    @foreach($cxpDisplay as $t)
+                    @forelse($cxp as $t)
                         <tr>
                             <td>{{ $t->descripcion ?? '-' }}</td>
                             <td>${{ number_format($t->monto,2) }}</td>
                             <td>{{ $t->created_at instanceof \Illuminate\Support\Carbon ? $t->created_at->format('Y-m-d') : $t->created_at }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="3">No hay cuentas por pagar registradas.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -355,33 +299,37 @@
                     <tr><th>Cliente</th><th>Monto</th><th>Vencimiento</th></tr>
                 </thead>
                 <tbody>
-                    @foreach($cxcDisplay as $t)
+                    @forelse($cxc as $t)
                         <tr>
                             <td>{{ $t->descripcion ?? '-' }}</td>
                             <td>${{ number_format($t->monto,2) }}</td>
                             <td>{{ $t->created_at instanceof \Illuminate\Support\Carbon ? $t->created_at->format('Y-m-d') : $t->created_at }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="3">No hay cuentas por cobrar registradas.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
     </div>
 
     <div class="card-panel" style="padding:1.25rem; margin-bottom:1rem;">
-        <h3>Informes Financieros</h3>
+        <h3>Informes financieros de demostración</h3>
         <div class="data-table-wrap" style="margin-top:0.75rem;">
             <table class="data-table">
                 <thead>
                     <tr><th>Tipo</th><th>Periodo</th><th>Archivo</th></tr>
                 </thead>
                 <tbody>
-                    @foreach($informesDisplay as $inf)
+                    @forelse($informes as $inf)
                         <tr>
                             <td>{{ $inf->tipo }}</td>
                             <td>{{ $inf->periodo }}</td>
                             <td><a href="{{ asset('storage/'.$inf->ruta) }}" target="_blank">{{ $inf->nombre_archivo }}</a></td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="3">No se cargan informes reales en este panel de demostración.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

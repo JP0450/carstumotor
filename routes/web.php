@@ -2,22 +2,28 @@
 
 use App\Http\Controllers\Admin\VehiculoController as AdminVehiculoController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CitaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinanzaController;
+use App\Http\Controllers\FinanzaWebController;
+use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VehiculoController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\CitaController;
-use App\Http\Controllers\FinanzaController;
-use App\Models\User;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\VehiculoInternacionalController;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
 Route::get('/catalogo', [VehiculoController::class, 'catalogo'])->name('catalogo');
+Route::get('/catalogo/{id}', [VehiculoController::class, 'ficha'])->name('catalogo.show');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'loginForm'])->name('login');
@@ -31,15 +37,17 @@ Route::middleware('guest')->group(function () {
         return view('auth.forgot-password');
     })->name('password.request');
 
-    Route::post('/forgot-password', function (Illuminate\Http\Request $request) {
+    Route::post('/forgot-password', function (Request $request) {
         $request->validate(['email' => 'required|email']);
         try {
-            $status = Illuminate\Support\Facades\Password::sendResetLink($request->only('email'));
-        } catch (\Throwable $e) {
-            \Log::warning('No se pudo enviar reset: '.$e->getMessage(), ['email' => $request->email]);
+            $status = Password::sendResetLink($request->only('email'));
+        } catch (Throwable $e) {
+            Log::warning('No se pudo enviar reset: '.$e->getMessage(), ['email' => $request->email]);
+
             return back()->with('status', 'Si tu email existe en nuestra base, recibirás un enlace. Revisa también spam.');
         }
-        return $status === Illuminate\Support\Facades\Password::RESET_LINK_SENT
+
+        return $status === Password::RESET_LINK_SENT
             ? back()->with('status', __($status))
             : back()->withErrors(['email' => __($status)]);
     })->name('password.email');
@@ -48,26 +56,28 @@ Route::middleware('guest')->group(function () {
         return view('auth.reset-password', ['token' => $token, 'email' => request('email')]);
     })->name('password.reset');
 
-    Route::post('/reset-password', function (Illuminate\Http\Request $request) {
+    Route::post('/reset-password', function (Request $request) {
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
             'password' => ['required', 'string', 'min:8', 'confirmed', Illuminate\Validation\Rules\Password::min(8)->letters()->numbers()->symbols()],
         ]);
         try {
-            $status = Illuminate\Support\Facades\Password::reset(
+            $status = Password::reset(
                 $request->only('email', 'password', 'password_confirmation', 'token'),
                 function ($user, $password) {
-                    $user->forceFill(['password' => Illuminate\Support\Facades\Hash::make($password)])->setRememberToken(Illuminate\Support\Str::random(60));
+                    $user->forceFill(['password' => Hash::make($password)])->setRememberToken(Str::random(60));
                     $user->save();
-                    event(new Illuminate\Auth\Events\PasswordReset($user));
+                    event(new PasswordReset($user));
                 }
             );
-        } catch (\Throwable $e) {
-            \Log::error('Error al resetear password: '.$e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Error al resetear password: '.$e->getMessage());
+
             return back()->withErrors(['email' => 'No se pudo restablecer. Intenta de nuevo.']);
         }
-        return $status === Illuminate\Support\Facades\Password::PASSWORD_RESET
+
+        return $status === Password::PASSWORD_RESET
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => [__($status)]]);
     })->name('password.update');
@@ -87,33 +97,36 @@ Route::middleware('auth')->group(function () {
         return view('auth.verify-email');
     })->name('verification.notice');
 
-    Route::get('/email/verify/{id}/{hash}', function (Illuminate\Http\Request $request, string $id, string $hash) {
+    Route::get('/email/verify/{id}/{hash}', function (Request $request, string $id, string $hash) {
         $user = $request->user();
-        if (!$user || (string) $user->getKey() !== (string) $id) {
+        if (! $user || (string) $user->getKey() !== (string) $id) {
             return redirect()->route('verification.notice')->withErrors(['email' => 'Enlace inválido.']);
         }
         if ($user->hasVerifiedEmail()) {
             return redirect('/catalogo')->with('verified', true);
         }
-        if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return redirect()->route('verification.notice')->withErrors(['email' => 'Enlace inválido o expirado. Solicita uno nuevo.']);
         }
         // Verificar firma manualmente ya lo hace middleware signed, pero si falla será 403 automático
         try {
             $user->markEmailAsVerified();
-            event(new Illuminate\Auth\Events\Verified($user));
-        } catch (\Throwable $e) {
-            \Log::warning('Error al verificar email: '.$e->getMessage(), ['user_id' => $user->id ?? null]);
+            event(new Verified($user));
+        } catch (Throwable $e) {
+            Log::warning('Error al verificar email: '.$e->getMessage(), ['user_id' => $user->id ?? null]);
+
             return redirect()->route('verification.notice')->withErrors(['email' => 'No se pudo verificar. Solicita uno nuevo.']);
         }
+
         return redirect('/catalogo')->with('verified', true);
     })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
 
     Route::post('/email/verification-notification', function (Request $request) {
         try {
             $request->user()->sendEmailVerificationNotification();
-        } catch (\Throwable $e) {
-            \Log::warning('No se pudo reenviar verificación: '.$e->getMessage(), ['user_id' => $request->user()->id]);
+        } catch (Throwable $e) {
+            Log::warning('No se pudo reenviar verificación: '.$e->getMessage(), ['user_id' => $request->user()->id]);
+
             return back()->with('status', 'verification-link-sent')->with('warning', 'Si el correo no llega, verifica la configuración SMTP.');
         }
 
@@ -124,6 +137,33 @@ Route::middleware('auth')->group(function () {
     Route::get('/email/verification-notification', function () {
         return redirect()->route('verification.notice');
     })->middleware(['throttle:6,1']);
+
+    Route::get('/admin/dashboard/gerencial', [DashboardController::class, 'gerencial'])
+        ->name('admin.dashboard.gerencial');
+    Route::get('/admin/dashboard/gerencial/reporte.pdf', [DashboardController::class, 'exportarPdf'])
+        ->name('admin.dashboard.gerencial.pdf');
+    Route::get('/admin/dashboard/gerencial/reporte.csv', [DashboardController::class, 'exportarCsv'])
+        ->name('admin.dashboard.gerencial.csv');
+    Route::redirect('/admin/dashboard/contador', '/admin/dashboard/gerencial')
+        ->name('admin.dashboard.contador');
+    Route::get('/finanzas', [FinanzaWebController::class, 'index'])->name('finanzas.index');
+    Route::get('/finanzas/{transaccion}/editar', [FinanzaWebController::class, 'edit'])->name('finanzas.edit');
+    Route::post('/finanzas', [FinanzaWebController::class, 'store'])->name('finanzas.store');
+    Route::put('/finanzas/{transaccion}', [FinanzaWebController::class, 'update'])->name('finanzas.update');
+    Route::delete('/finanzas/{transaccion}', [FinanzaWebController::class, 'destroy'])->name('finanzas.destroy');
+
+    Route::prefix('internacional/vehiculos')
+        ->name('internacional.vehiculos.')
+        ->controller(VehiculoInternacionalController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{vehiculo}', 'edit')->name('edit');
+            Route::put('/{vehiculo}', 'update')->name('update');
+            Route::post('/{vehiculo}/documentos', 'storeDocument')->name('documentos.store');
+            Route::get('/{vehiculo}/documentos/{documento}', 'showDocument')->name('documentos.show');
+            Route::get('/{vehiculo}/documentos/{documento}/descargar', 'downloadDocument')->name('documentos.download');
+            Route::delete('/{vehiculo}/documentos/{documento}', 'destroyDocument')->name('documentos.destroy');
+        });
 });
 
 Route::middleware(['auth', 'role:jefe,contador'])
@@ -131,8 +171,6 @@ Route::middleware(['auth', 'role:jefe,contador'])
     ->name('admin.')
     ->group(function () {
         Route::resource('vehiculos', AdminVehiculoController::class)->except(['show']);
-        Route::get('dashboard/contador', [DashboardController::class, 'contador'])->name('dashboard.contador');
-
         // Rutas para generación de PDFs
         Route::get('finanzas/reporte-pdf', [FinanzaController::class, 'descargarReportePDF'])->name('finanzas.reporte.pdf');
         Route::get('pedidos/{id}/pdf', [PedidoController::class, 'descargarPedidoPDF'])->name('pedidos.pdf');

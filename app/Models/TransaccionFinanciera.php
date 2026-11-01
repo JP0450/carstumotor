@@ -15,6 +15,8 @@ class TransaccionFinanciera extends Model
     protected $fillable = [
         'tipo',
         'monto',
+        'moneda',
+        'vehiculo_id',
         'descripcion',
         'fecha',
         'categoria',
@@ -32,5 +34,10 @@ class TransaccionFinanciera extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vehiculo(): BelongsTo
+    {
+        return $this->belongsTo(Vehiculo::class);
     }
 }

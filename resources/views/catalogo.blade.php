@@ -9,13 +9,15 @@
         <p class="mt-2 text-white/75 max-w-2xl">
             @auth Hola, {{ strtok(auth()->user()->name, ' ') }} — filtrá por marca, color o precio máximo. @else Explorá nuestros vehículos disponibles y agendá tu asesoría. @endauth
         </p>
-        @auth @php $isAdmin = in_array(strtolower(trim(auth()->user()->role ?? '')), [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_CONTADOR], true); @endphp
-            @if($isAdmin)
+        @auth
                 <div class="mt-4 flex flex-wrap gap-2">
+                    <a href="{{ route('admin.dashboard.gerencial') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-chart-line"></i> Dashboard gerencial</a>
+                    <a href="{{ route('internacional.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-globe"></i> Comercio internacional</a>
+                    @php $isAdmin = in_array(strtolower(trim(auth()->user()->role ?? '')), [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_CONTADOR], true); @endphp
+                    @if($isAdmin)
                     <a href="{{ route('admin.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-clipboard-list"></i> CRUD vehículos</a>
-                    <a href="{{ route('admin.dashboard.contador') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-chart-line"></i> Dashboard</a>
+                    @endif
                 </div>
-            @endif
         @endauth
     </div>
 </section>
@@ -65,14 +67,16 @@
             <div class="p-4 flex flex-col gap-2 flex-1">
                 <div class="flex items-baseline justify-between gap-2">
                     <div class="font-black text-slate-900">{{ $vehiculo->marca }} {{ $vehiculo->modelo }}</div>
-                    <div class="text-sm font-bold text-zinc-500">{{ $vehiculo->color }}</div>
+                    <div class="text-sm font-bold text-zinc-500">
+                        {{ $vehiculo->color }}@if($vehiculo->color_secundario) / {{ $vehiculo->color_secundario }}@endif
+                    </div>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5">
                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-2 py-2 text-center text-xs font-bold text-zinc-600"><i class="fas fa-door-open text-teal-600"></i> {{ $vehiculo->puertas }} pta</div>
                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-2 py-2 text-center text-xs font-bold text-zinc-600"><i class="fas fa-gauge-high text-teal-600"></i> {{ $vehiculo->hp }} HP</div>
                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-2 py-2 text-center text-xs font-bold text-zinc-700">${{ number_format($vehiculo->precio_cliente, 0, ',', '.') }}</div>
                 </div>
-                <a href="#" class="mt-auto inline-flex justify-center items-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-eye"></i> Ver ficha</a>
+                <a href="{{ route('catalogo.show', $vehiculo->id) }}" class="mt-auto inline-flex justify-center items-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-eye"></i> Ver ficha</a>
             </div>
         </article>
         @empty

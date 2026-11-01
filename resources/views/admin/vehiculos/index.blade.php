@@ -27,7 +27,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Marca / Modelo</th>
-                        <th>Color</th>
+                        <th>Colores</th>
                         <th>Puertas</th>
                         <th>HP</th>
                         <th>Precio cliente</th>
@@ -40,7 +40,7 @@
                         <tr>
                             <td>{{ $v->id }}</td>
                             <td><strong>{{ $v->marca }}</strong> {{ $v->modelo }}</td>
-                            <td>{{ $v->color }}</td>
+                            <td>{{ $v->color }}{{ $v->color_secundario ? ' / '.$v->color_secundario : '' }}</td>
                             <td>{{ $v->puertas }}</td>
                             <td>{{ $v->hp }}</td>
                             <td>${{ number_format((float) $v->precio_cliente, 0, ',', '.') }}</td>
@@ -53,6 +53,9 @@
                             </td>
                             <td>
                                 <div class="row-actions">
+                                    <a href="{{ route('internacional.vehiculos.edit', $v) }}" class="btn-ghost">
+                                        <i class="fas fa-globe"></i> Ficha internacional
+                                    </a>
                                     <a href="{{ route('admin.vehiculos.edit', $v) }}" class="btn-ghost">
                                         <i class="fas fa-pen"></i> Editar
                                     </a>
