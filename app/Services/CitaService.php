@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Vehiculo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -41,6 +42,8 @@ class CitaService
                 ]);
             }
 
+            $this->ensureSlotAvailable($vehiculoDisponible->id, $data['fecha_hora']);
+
             $contador = User::query()
                 ->where('role', User::ROLE_CONTADOR)
                 ->withCount([
@@ -70,6 +73,67 @@ class CitaService
                 'estado' => 'pendiente',
             ]);
         });
+    }
+
+    public function actualizarHorarioCompra(Cita $cita, string $fechaHora): void
+    {
+        DB::transaction(function () use ($cita, $fechaHora): void {
+            $citaBloqueada = Cita::query()
+                ->lockForUpdate()
+                ->findOrFail($cita->id);
+
+            if ($citaBloqueada->estado === 'cancelada') {
+                throw ValidationException::withMessages([
+                    'fecha_hora' => 'No puedes editar una cita cancelada.',
+                ]);
+            }
+
+            if ($citaBloqueada->fecha_hora->isToday() || $citaBloqueada->fecha_hora->isPast()) {
+                throw ValidationException::withMessages([
+                    'fecha_hora' => 'No puedes cambiar la fecha ni la hora el mismo día de la asesoría.',
+                ]);
+            }
+
+            $vehiculo = Vehiculo::query()
+                ->whereKey($citaBloqueada->vehiculo_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $vehiculo) {
+                throw ValidationException::withMessages([
+                    'fecha_hora' => 'El vehículo de esta cita ya no está disponible para actualizar el horario.',
+                ]);
+            }
+
+            $this->ensureSlotAvailable($vehiculo->id, $fechaHora, $citaBloqueada->id);
+
+            $citaBloqueada->update([
+                'fecha_hora' => $fechaHora,
+                'estado' => 'pendiente',
+                'cliente_confirmo_at' => null,
+            ]);
+        });
+    }
+
+    private function ensureSlotAvailable(int $vehiculoId, string $fechaHora, ?int $exceptCitaId = null): void
+    {
+        $slot = Carbon::parse($fechaHora);
+        $query = Cita::query()
+            ->where('vehiculo_id', $vehiculoId)
+            ->where('tipo', 'compra')
+            ->where('estado', '!=', 'cancelada')
+            ->whereDate('fecha_hora', $slot->toDateString())
+            ->whereTime('fecha_hora', $slot->format('H:i:s'));
+
+        if ($exceptCitaId !== null) {
+            $query->where('id', '!=', $exceptCitaId);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'fecha_hora' => 'Ese horario ya fue seleccionado para este vehículo. Elige otra fecha u hora.',
+            ]);
+        }
     }
 
     public function listarPorUsuario(int $userId): Collection

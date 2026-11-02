@@ -51,6 +51,39 @@ class CitaCompraController extends Controller
         return view('compras.mine', compact('solicitudes'));
     }
 
+    public function updateSchedule(Request $request, Cita $cita): RedirectResponse
+    {
+        $this->ensureCustomerOwns($request, $cita);
+
+        $validated = $request->validate([
+            'fecha_hora' => ['required', 'date', 'after:now'],
+        ], [
+            'fecha_hora.required' => 'Selecciona la nueva fecha y hora para la asesoría.',
+            'fecha_hora.after' => 'La nueva fecha y hora deben ser futuras.',
+        ]);
+
+        $this->citaService->actualizarHorarioCompra($cita, $validated['fecha_hora']);
+
+        return redirect()->route('compras.mine', [], Response::HTTP_SEE_OTHER)
+            ->with('success', 'El horario se actualizó. Contabilidad debe confirmar el nuevo horario y tendrás que confirmar tu asistencia nuevamente.');
+    }
+
+    public function confirmAttendance(Request $request, Cita $cita): RedirectResponse
+    {
+        $this->ensureCustomerOwns($request, $cita);
+
+        if ($cita->estado === 'cancelada' || $cita->fecha_hora->isPast()) {
+            return back()->with('error', 'No puedes confirmar asistencia a una cita cancelada o que ya pasó.');
+        }
+
+        if (! $cita->cliente_confirmo_at) {
+            $cita->update(['cliente_confirmo_at' => now()]);
+        }
+
+        return redirect()->route('compras.mine')
+            ->with('success', 'Confirmaste tu asistencia. Esta confirmación no cambia el estado del horario gestionado por Contabilidad.');
+    }
+
     public function index(Request $request): View
     {
         $query = Cita::query()
@@ -89,6 +122,14 @@ class CitaCompraController extends Controller
     {
         abort_unless(
             $vehiculo->disponible && ! $vehiculo->ventaRegistrada()->exists(),
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    private function ensureCustomerOwns(Request $request, Cita $cita): void
+    {
+        abort_unless(
+            $cita->tipo === 'compra' && $cita->user_id === $request->user()->id,
             Response::HTTP_NOT_FOUND
         );
     }

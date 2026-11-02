@@ -20,12 +20,14 @@ class Cita extends Model
         'fecha_hora',
         'motivo',
         'estado',
+        'cliente_confirmo_at',
     ];
 
     protected function casts(): array
     {
         return [
             'fecha_hora' => 'datetime',
+            'cliente_confirmo_at' => 'datetime',
         ];
     }
 

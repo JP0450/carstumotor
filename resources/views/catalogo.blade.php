@@ -83,7 +83,16 @@
                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-2 py-2 text-center text-xs font-bold text-zinc-600"><i class="fas fa-gauge-high text-teal-600"></i> {{ $vehiculo->hp }} HP</div>
                     <div class="bg-zinc-50 border border-zinc-200 rounded-xl px-2 py-2 text-center text-xs font-bold text-zinc-700">${{ number_format($vehiculo->precio_cliente, 0, ',', '.') }}</div>
                 </div>
-                <a href="{{ route('catalogo.show', $vehiculo->id) }}" class="mt-auto inline-flex justify-center items-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-eye"></i> Ver ficha</a>
+                <div class="mt-auto grid gap-2">
+                    <a href="{{ route('catalogo.show', $vehiculo->id) }}" class="inline-flex justify-center items-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-eye"></i> Ver ficha</a>
+                    @auth
+                        @if (auth()->user()->hasRole(\App\Models\User::ROLE_EXTERNO))
+                            <a href="{{ route('catalogo.compra.create', $vehiculo) }}" class="inline-flex justify-center items-center gap-2 w-full py-2.5 rounded-xl border border-teal-700 text-teal-800 font-black hover:bg-teal-50">
+                                <i class="fas fa-calendar-check"></i> Agendar cita
+                            </a>
+                        @endif
+                    @endauth
+                </div>
             </div>
         </article>
         @empty

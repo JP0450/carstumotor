@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Admin\VehiculoController as AdminVehiculoController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CitaController;
 use App\Http\Controllers\CitaCompraController;
+use App\Http\Controllers\CitaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanzaController;
 use App\Http\Controllers\FinanzaWebController;
@@ -146,6 +146,10 @@ Route::middleware('auth')->group(function () {
             ->name('catalogo.compra.store');
         Route::get('/mis-solicitudes-compra', [CitaCompraController::class, 'mine'])
             ->name('compras.mine');
+        Route::put('/mis-solicitudes-compra/{cita}/horario', [CitaCompraController::class, 'updateSchedule'])
+            ->name('compras.schedule.update');
+        Route::post('/mis-solicitudes-compra/{cita}/confirmar-asistencia', [CitaCompraController::class, 'confirmAttendance'])
+            ->name('compras.attendance.confirm');
     });
 
     Route::middleware('role:jefe,contador')->group(function () {

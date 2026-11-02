@@ -28,6 +28,7 @@
                         <th>Cliente y contacto</th>
                         <th>Asignada a</th>
                         <th>Comentarios</th>
+                        <th>Asistencia del cliente</th>
                         <th>Estado</th>
                     </tr>
                 </thead>
@@ -46,6 +47,13 @@
                             </td>
                             <td>{{ $solicitud->responsable?->name ?? 'Sin asignar' }}</td>
                             <td>{{ $solicitud->motivo }}</td>
+                            <td>
+                                @if ($solicitud->cliente_confirmo_at)
+                                    Confirmó {{ $solicitud->cliente_confirmo_at->format('d/m/Y H:i') }}
+                                @else
+                                    Sin confirmar
+                                @endif
+                            </td>
                             <td>
                                 <form method="post" action="{{ route('admin.compras.status', $solicitud) }}" class="inline-flex items-center gap-2">
                                     @csrf

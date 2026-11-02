@@ -24,7 +24,22 @@ class CitaCompraTest extends TestCase
         $accountant = User::factory()->create(['role' => User::ROLE_CONTADOR]);
 
         $this->actingAs($client)
-            ->get(route('catalogo.compra.create', $vehicle))
+            ->get(route('compras.mine'))
+            ->assertOk()
+            ->assertSee('Hacer una solicitud')
+            ->assertSee('href="'.route('catalogo').'"', false);
+
+        $this->get(route('catalogo'))
+            ->assertOk()
+            ->assertSee('Agendar cita')
+            ->assertSee('href="'.route('catalogo.compra.create', $vehicle).'"', false)
+            ->assertSee('href="'.route('catalogo.show', $vehicle).'"', false);
+
+        $this->get(route('catalogo.show', $vehicle))
+            ->assertOk()
+            ->assertSee('href="'.route('catalogo.compra.create', $vehicle).'"', false);
+
+        $this->get(route('catalogo.compra.create', $vehicle))
             ->assertOk()
             ->assertSee('Agendar asesoría')
             ->assertSee('Cliente de prueba')
@@ -65,6 +80,206 @@ class CitaCompraTest extends TestCase
         $this->assertSame('confirmada', $appointment->fresh()->estado);
         $this->assertTrue($vehicle->fresh()->disponible);
         $this->assertDatabaseCount('transacciones_financieras', 0);
+    }
+
+    public function test_customer_can_confirm_attendance_without_changing_accounting_status(): void
+    {
+        $vehicle = $this->createVehicle();
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $accountant = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+        $appointment = Cita::query()->create([
+            'user_id' => $client->id,
+            'responsable_id' => $accountant->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Cliente',
+            'telefono_contacto' => '3005550101',
+            'fecha_hora' => now()->addDays(3),
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'pendiente',
+        ]);
+
+        $this->actingAs($client)
+            ->get(route('compras.mine'))
+            ->assertOk()
+            ->assertSee('Confirmar mi asistencia')
+            ->assertSee('El mismo día de la asesoría ya no podrás cambiar la fecha ni la hora.');
+
+        $this->post(route('compras.attendance.confirm', $appointment))
+            ->assertRedirect(route('compras.mine'))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($appointment->fresh()->cliente_confirmo_at);
+        $this->assertSame('pendiente', $appointment->fresh()->estado);
+
+        $this->actingAs($accountant)
+            ->get(route('admin.compras.index'))
+            ->assertOk()
+            ->assertSee('Asistencia del cliente')
+            ->assertSee('Confirmó');
+    }
+
+    public function test_customer_can_change_schedule_before_appointment_day_and_must_confirm_again(): void
+    {
+        $vehicle = $this->createVehicle();
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $appointment = Cita::query()->create([
+            'user_id' => $client->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Cliente',
+            'telefono_contacto' => '3005550101',
+            'fecha_hora' => now()->addDays(3),
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'confirmada',
+            'cliente_confirmo_at' => now(),
+        ]);
+        $newSchedule = now()->addDays(5)->setTime(15, 30);
+
+        $this->actingAs($client)
+            ->put(route('compras.schedule.update', $appointment), [
+                'fecha_hora' => $newSchedule->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('compras.mine'))
+            ->assertStatus(303)
+            ->assertSessionHas('success');
+
+        $appointment->refresh();
+        $this->assertSame($newSchedule->format('Y-m-d H:i'), $appointment->fecha_hora->format('Y-m-d H:i'));
+        $this->assertSame('pendiente', $appointment->estado);
+        $this->assertNull($appointment->cliente_confirmo_at);
+
+        $this->get(route('compras.mine'))
+            ->assertOk()
+            ->assertSee('El horario se actualizó.')
+            ->assertSee('Cambiar fecha y hora')
+            ->assertSee('Confirmar mi asistencia');
+    }
+
+    public function test_customer_cannot_change_schedule_on_the_appointment_day(): void
+    {
+        $this->travelTo(now()->startOfDay());
+        $vehicle = $this->createVehicle();
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $appointmentSchedule = now()->setTime(15, 0);
+        $appointment = Cita::query()->create([
+            'user_id' => $client->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Cliente',
+            'telefono_contacto' => '3005550101',
+            'fecha_hora' => $appointmentSchedule,
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'pendiente',
+        ]);
+
+        $this->actingAs($client)
+            ->get(route('compras.mine'))
+            ->assertOk()
+            ->assertSee('Esta asesoría es hoy; ya no puedes modificar su horario.')
+            ->assertDontSee(route('compras.schedule.update', $appointment), false);
+
+        $this->from(route('compras.mine'))
+            ->put(route('compras.schedule.update', $appointment), [
+                'fecha_hora' => now()->addDay()->setTime(15, 0)->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('compras.mine'))
+            ->assertSessionHasErrors([
+                'fecha_hora' => 'No puedes cambiar la fecha ni la hora el mismo día de la asesoría.',
+            ]);
+
+        $this->assertSame(
+            $appointmentSchedule->format('Y-m-d H:i'),
+            $appointment->fresh()->fecha_hora->format('Y-m-d H:i')
+        );
+    }
+
+    public function test_customer_cannot_use_an_existing_vehicle_time_slot_for_new_or_updated_requests(): void
+    {
+        $vehicle = $this->createVehicle();
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $otherClient = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        User::factory()->create(['role' => User::ROLE_CONTADOR]);
+        $existingSchedule = now()->addDays(3)->setTime(14, 0);
+        $existingAppointment = Cita::query()->create([
+            'user_id' => $otherClient->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Otro cliente',
+            'telefono_contacto' => '3005550102',
+            'fecha_hora' => $existingSchedule,
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'pendiente',
+        ]);
+        $editableSchedule = now()->addDays(4)->setTime(14, 0);
+        $editableAppointment = Cita::query()->create([
+            'user_id' => $client->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Cliente',
+            'telefono_contacto' => '3005550101',
+            'fecha_hora' => $editableSchedule,
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'pendiente',
+        ]);
+        $slot = $existingSchedule->format('Y-m-d\TH:i');
+
+        $this->followingRedirects()
+            ->actingAs($client)
+            ->from(route('catalogo.compra.create', $vehicle))
+            ->post(route('catalogo.compra.store', $vehicle), [
+                'nombre_contacto' => 'Cliente',
+                'telefono_contacto' => '3005550101',
+                'fecha_hora' => $slot,
+            ])
+            ->assertOk()
+            ->assertSee('Ese horario ya fue seleccionado para este vehículo. Elige otra fecha u hora.');
+
+        $this->followingRedirects()
+            ->from(route('compras.mine'))
+            ->put(route('compras.schedule.update', $editableAppointment), [
+                'fecha_hora' => $slot,
+            ])
+            ->assertOk()
+            ->assertSee('Ese horario ya fue seleccionado para este vehículo. Elige otra fecha u hora.');
+
+        $this->assertDatabaseCount('citas', 2);
+        $this->assertSame(
+            $existingSchedule->format('Y-m-d H:i'),
+            $existingAppointment->fresh()->fecha_hora->format('Y-m-d H:i')
+        );
+        $this->assertSame(
+            $editableSchedule->format('Y-m-d H:i'),
+            $editableAppointment->fresh()->fecha_hora->format('Y-m-d H:i')
+        );
+    }
+
+    public function test_customer_cannot_manage_another_customers_appointment(): void
+    {
+        $vehicle = $this->createVehicle();
+        $owner = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $otherClient = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $appointment = Cita::query()->create([
+            'user_id' => $owner->id,
+            'vehiculo_id' => $vehicle->id,
+            'tipo' => 'compra',
+            'nombre_contacto' => 'Cliente',
+            'telefono_contacto' => '3005550101',
+            'fecha_hora' => now()->addDays(3),
+            'motivo' => 'Asesoría de compra',
+            'estado' => 'pendiente',
+        ]);
+
+        $this->actingAs($otherClient)
+            ->post(route('compras.attendance.confirm', $appointment))
+            ->assertNotFound();
+
+        $this->put(route('compras.schedule.update', $appointment), [
+            'fecha_hora' => now()->addDays(4)->format('Y-m-d\TH:i'),
+        ])->assertNotFound();
+
+        $this->assertNull($appointment->fresh()->cliente_confirmo_at);
+        $this->assertSame('pendiente', $appointment->fresh()->estado);
     }
 
     public function test_availability_changes_only_when_manually_disabled_or_sale_is_registered(): void
