@@ -17,6 +17,8 @@ class TransaccionFinanciera extends Model
         'monto',
         'moneda',
         'vehiculo_id',
+        'vehiculo_referencia',
+        'vehiculo_marca',
         'descripcion',
         'fecha',
         'categoria',
@@ -28,6 +30,7 @@ class TransaccionFinanciera extends Model
         return [
             'monto' => 'decimal:2',
             'fecha' => 'date',
+            'vehiculo_referencia' => 'integer',
         ];
     }
 

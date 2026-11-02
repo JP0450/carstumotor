@@ -23,10 +23,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    Route::get('/finanzas/transacciones', [FinanzaController::class, 'listarTransacciones']);
-    Route::post('/finanzas/transacciones', [FinanzaController::class, 'storeTransaccion']);
-    Route::put('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'updateTransaccion']);
-    Route::delete('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'destroyTransaccion']);
+    Route::middleware('role:'.User::ROLE_JEFE.','.User::ROLE_CONTADOR)->group(function () {
+        Route::get('/finanzas/transacciones', [FinanzaController::class, 'listarTransacciones']);
+        Route::post('/finanzas/transacciones', [FinanzaController::class, 'storeTransaccion']);
+        Route::put('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'updateTransaccion']);
+        Route::delete('/finanzas/transacciones/{transaccion}', [FinanzaController::class, 'destroyTransaccion']);
+    });
 
     // Usuario Externo
     Route::middleware('role:'.User::ROLE_EXTERNO)->group(function () {

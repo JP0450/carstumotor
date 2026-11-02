@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Vehiculo;
+use App\Models\TransaccionFinanciera;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -35,6 +37,34 @@ class CatalogoTest extends TestCase
 
         $this->get(route('catalogo.show', $unavailable->id))
             ->assertNotFound();
+    }
+
+    public function test_sold_vehicles_are_hidden_even_if_the_available_flag_is_stale(): void
+    {
+        $sold = $this->createVehicle('Toyota', 'Corolla', true);
+        TransaccionFinanciera::create([
+            'tipo' => 'ingreso',
+            'monto' => 50000000,
+            'moneda' => 'COP',
+            'vehiculo_id' => $sold->id,
+            'descripcion' => 'Venta de prueba',
+            'fecha' => now()->toDateString(),
+            'categoria' => 'Venta de vehículo',
+        ]);
+
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+
+        $this->get('/catalogo')
+            ->assertOk()
+            ->assertDontSee('Toyota Corolla');
+
+        $this->get(route('catalogo.show', $sold->id))
+            ->assertNotFound();
+
+        $this->actingAs($client)
+            ->getJson("/api/vehiculos/{$sold->id}")
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Vehículo no encontrado o no disponible.');
     }
 
     private function createVehicle(string $brand, string $model, bool $available): Vehiculo

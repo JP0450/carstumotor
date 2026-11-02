@@ -45,6 +45,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Cita::class);
     }
 
+    public function citasAsignadas()
+    {
+        return $this->hasMany(Cita::class, 'responsable_id');
+    }
+
     public function pedidosInternacionales()
     {
         return $this->hasMany(PedidoInternacional::class);

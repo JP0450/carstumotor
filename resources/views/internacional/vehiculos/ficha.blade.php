@@ -71,6 +71,12 @@
     </style>
 
     <div class="international-sheet">
+        <div class="sheet-back-row">
+            <a href="{{ route('internacional.vehiculos.index') }}" class="sheet-button secondary">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                Volver a la lista
+            </a>
+        </div>
         <div class="sheet-topline">
             <h1>Ficha del vehículo</h1>
             @if ($mostrarDemo)

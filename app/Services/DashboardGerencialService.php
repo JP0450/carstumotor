@@ -34,12 +34,12 @@ class DashboardGerencialService
         $transaccionesMoneda = $transaccionesDelPeriodo->where('moneda', $moneda)->values();
         $serieFinanciera = $this->crearSerieMensual($inicio, $fin, $transaccionesMoneda);
         $serieVentas = $this->crearSerieVentas($inicio, $fin, $moneda);
-        $registrosIngresos = (int) $transaccionesDelPeriodo->where('tipo', 'ingreso')->sum('cantidad');
-        $registrosEgresos = (int) $transaccionesDelPeriodo->whereIn('tipo', self::EXPENSE_TYPES)->sum('cantidad');
+        $registrosIngresos = (int) $transaccionesMoneda->where('tipo', 'ingreso')->sum('cantidad');
+        $registrosEgresos = (int) $transaccionesMoneda->whereIn('tipo', self::EXPENSE_TYPES)->sum('cantidad');
         $ingresos = (float) $transaccionesMoneda->where('tipo', 'ingreso')->sum('total');
         $egresos = (float) $transaccionesMoneda->whereIn('tipo', self::EXPENSE_TYPES)->sum('total');
         $ventasPorVehiculo = $this->obtenerVentasPorVehiculo($inicio, $fin, $moneda);
-        $ventas = count($ventasPorVehiculo['vehiculos']);
+        $ventas = $ventasPorVehiculo['cantidad'];
         $rentabilidadMarcas = $this->obtenerRentabilidadPorMarca($ventasPorVehiculo['montos']);
         $margenPromedio = $this->obtenerMargenPromedioCatalogo();
         $cuentasPorCobrar = $this->obtenerTotalTipoMovimiento('cuenta_por_cobrar', $moneda);
@@ -85,7 +85,7 @@ class DashboardGerencialService
                 ],
                 'vehiculos_vendidos' => [
                     'valor' => $ventas,
-                    'nota' => 'Vehículos asociados a movimientos de ingreso categorizados como venta de vehículo en el periodo.',
+                    'nota' => 'Movimientos categorizados como venta de vehículo en el periodo, incluso si el vehículo fue eliminado después.',
                 ],
                 'importaciones_en_curso' => [
                     'valor' => $pedidosEnCurso,
@@ -129,8 +129,9 @@ class DashboardGerencialService
                 'importacionesRetrasadas' => $pedidosRetrasados,
             ],
             'graficas' => [
-                'ventasDisponible' => true,
-                'marcasDisponible' => true,
+                'finanzasDisponible' => $registrosIngresos + $registrosEgresos > 0,
+                'ventasDisponible' => $ventas > 0,
+                'marcasDisponible' => $rentabilidadMarcas['labels'] !== [],
                 'estadosInventarioDisponibles' => true,
             ],
         ];
@@ -205,13 +206,12 @@ class DashboardGerencialService
         $ventas = TransaccionFinanciera::query()
             ->where('tipo', 'ingreso')
             ->where('categoria', 'Venta de vehículo')
-            ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
             ->whereDate('fecha', '>=', $inicio->toDateString())
             ->whereDate('fecha', '<=', $fin->toDateString())
-            ->get(['vehiculo_id', 'fecha'])
+            ->get(['fecha'])
             ->groupBy(fn (TransaccionFinanciera $venta): string => CarbonImmutable::parse($venta->fecha)->format('Y-m'))
-            ->map(fn (Collection $ventasMes): int => $ventasMes->pluck('vehiculo_id')->unique()->count());
+            ->map(fn (Collection $ventasMes): int => $ventasMes->count());
 
         $labels = [];
         $cantidades = [];
@@ -233,39 +233,68 @@ class DashboardGerencialService
         $ventas = TransaccionFinanciera::query()
             ->where('tipo', 'ingreso')
             ->where('categoria', 'Venta de vehículo')
-            ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
             ->whereDate('fecha', '>=', $inicio->toDateString())
             ->whereDate('fecha', '<=', $fin->toDateString())
-            ->selectRaw('vehiculo_id, SUM(monto) AS total')
-            ->groupBy('vehiculo_id')
-            ->get()
-            ->keyBy('vehiculo_id');
-        $costos = TransaccionFinanciera::query()
+            ->get(['id', 'vehiculo_id', 'vehiculo_referencia', 'vehiculo_marca', 'monto']);
+        $costosCompra = TransaccionFinanciera::query()
+            ->where('tipo', 'gasto')
+            ->where('categoria', 'Compra de vehículo')
+            ->where('moneda', $moneda)
+            ->where(function ($query): void {
+                $query->whereNotNull('vehiculo_referencia')
+                    ->orWhereNotNull('vehiculo_id');
+            })
+            ->get(['vehiculo_id', 'vehiculo_referencia', 'monto']);
+        $costosVenta = TransaccionFinanciera::query()
             ->where('tipo', 'costo_venta')
-            ->whereNotNull('vehiculo_id')
             ->where('moneda', $moneda)
             ->whereDate('fecha', '>=', $inicio->toDateString())
             ->whereDate('fecha', '<=', $fin->toDateString())
-            ->selectRaw('vehiculo_id, SUM(monto) AS total')
-            ->groupBy('vehiculo_id')
-            ->pluck('total', 'vehiculo_id');
-        $vehiculos = Vehiculo::query()
-            ->whereIn('id', $ventas->keys())
-            ->get(['id', 'marca']);
-        $montos = [];
+            ->where(function ($query): void {
+                $query->whereNotNull('vehiculo_referencia')
+                    ->orWhereNotNull('vehiculo_id');
+            })
+            ->get(['vehiculo_id', 'vehiculo_referencia', 'monto']);
+        $idsVehiculos = $ventas->pluck('vehiculo_id')->filter()->unique()->values();
+        $marcasVehiculos = Vehiculo::query()
+            ->whereIn('id', $idsVehiculos)
+            ->pluck('marca', 'id');
+        $costosCompraPorReferencia = $costosCompra
+            ->groupBy(fn (TransaccionFinanciera $costo): string => (string) ($costo->vehiculo_referencia ?? $costo->vehiculo_id))
+            ->map(fn (Collection $costos): float => (float) $costos->sum('monto'));
+        $costosVentaPorReferencia = $costosVenta
+            ->groupBy(fn (TransaccionFinanciera $costo): string => (string) ($costo->vehiculo_referencia ?? $costo->vehiculo_id))
+            ->map(fn (Collection $costos): float => (float) $costos->sum('monto'));
+        $ventasPorReferencia = [];
 
-        foreach ($vehiculos as $vehiculo) {
-            $montos[$vehiculo->id] = [
-                'marca' => $vehiculo->marca,
-                'ingresos' => (float) $ventas[$vehiculo->id]->total,
-                'costos' => (float) ($costos[$vehiculo->id] ?? 0),
-            ];
+        foreach ($ventas as $venta) {
+            $referencia = (string) ($venta->vehiculo_referencia ?? $venta->vehiculo_id ?? 'movimiento-'.$venta->id);
+            $marca = $venta->vehiculo_marca
+                ?? ($venta->vehiculo_id !== null ? $marcasVehiculos->get($venta->vehiculo_id) : null)
+                ?? 'Vehículo eliminado o sin identificar';
+
+            if (! isset($ventasPorReferencia[$referencia])) {
+                $ventasPorReferencia[$referencia] = [
+                    'marca' => $marca,
+                    'ingresos' => 0.0,
+                    'costos' => null,
+                ];
+            }
+
+            $ventasPorReferencia[$referencia]['ingresos'] += (float) $venta->monto;
+            if ($ventasPorReferencia[$referencia]['costos'] === null) {
+                if ($costosCompraPorReferencia->has($referencia)) {
+                    $ventasPorReferencia[$referencia]['costos'] = $costosCompraPorReferencia->get($referencia);
+                } elseif ($costosVentaPorReferencia->has($referencia)) {
+                    $ventasPorReferencia[$referencia]['costos'] = $costosVentaPorReferencia->get($referencia);
+                }
+            }
         }
 
         return [
-            'vehiculos' => $ventas->keys()->all(),
-            'montos' => $montos,
+            'cantidad' => $ventas->count(),
+            'montos' => $ventasPorReferencia,
         ];
     }
 
@@ -275,7 +304,9 @@ class DashboardGerencialService
             ->groupBy('marca')
             ->map(fn ($vehiculos) => [
                 'ingresos' => (float) $vehiculos->sum('ingresos'),
-                'utilidad' => (float) $vehiculos->sum(fn (array $vehiculo) => $vehiculo['ingresos'] - $vehiculo['costos']),
+                'utilidad' => $vehiculos->contains(fn (array $vehiculo): bool => $vehiculo['costos'] === null)
+                    ? null
+                    : (float) $vehiculos->sum(fn (array $vehiculo): float => $vehiculo['ingresos'] - $vehiculo['costos']),
             ]);
 
         return [

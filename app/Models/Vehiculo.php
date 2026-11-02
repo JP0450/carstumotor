@@ -52,4 +52,11 @@ class Vehiculo extends Model
     {
         return $this->hasMany(TransaccionFinanciera::class);
     }
+
+    public function ventaRegistrada(): HasOne
+    {
+        return $this->hasOne(TransaccionFinanciera::class)
+            ->where('tipo', 'ingreso')
+            ->where('categoria', 'Venta de vehículo');
+    }
 }

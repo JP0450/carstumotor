@@ -18,7 +18,13 @@ class MovimientoFinancieroRequest extends FormRequest
             'tipo' => ['required', Rule::in(['ingreso', 'gasto', 'impuesto', 'costo_venta'])],
             'monto' => ['required', 'numeric', 'gt:0'],
             'moneda' => ['required', Rule::in(['COP', 'USD', 'EUR'])],
-            'vehiculo_id' => ['nullable', 'integer', 'exists:vehiculos,id'],
+            'vehiculo_id' => [
+                Rule::requiredIf(fn (): bool => $this->input('tipo') === 'ingreso'
+                    && $this->input('categoria') === 'Venta de vehículo'),
+                'nullable',
+                'integer',
+                'exists:vehiculos,id',
+            ],
             'descripcion' => ['required', 'string', 'min:5', 'max:500'],
             'fecha' => ['required', 'date'],
             'categoria' => ['required', 'string', 'max:50'],

@@ -154,7 +154,7 @@
         </section>
 
         <div class="manager-note" role="note">
-            <strong>Datos de demostración:</strong> valores ficticios identificados como DEMO. Los importes se filtran por {{ $dashboard['periodo']['moneda'] }} y no se convierten; los movimientos históricos sin moneda se excluyen. La utilidad es ingresos menos egresos registrados y no sustituye un cierre contable. Los importes por cobrar/pagar son registros brutos, no saldos.
+            <strong>Alcance de los datos:</strong> este panel usa los movimientos guardados en finanzas; los registros marcados DEMO son datos de ejemplo. Los importes se filtran por {{ $dashboard['periodo']['moneda'] }} y no se convierten. Los movimientos sin moneda se excluyen. La utilidad es ingresos menos egresos registrados y no sustituye un cierre contable; los importes por cobrar/pagar son registros brutos, no saldos.
         </div>
 
         <section class="manager-additional" aria-labelledby="manager-additional-title">
@@ -179,17 +179,43 @@
                         <p>{{ $dashboard['finanzas']['registrosIngresos'] }} ingreso(s) · {{ $dashboard['finanzas']['registrosEgresos'] }} egreso(s) registrados; importes mensuales en {{ $dashboard['periodo']['moneda'] }}.</p>
                     </div>
                 </header>
-                <div class="manager-chart-wrap"><canvas id="manager-finance-chart" aria-label="Gráfica de ingresos y egresos mensuales en {{ $dashboard['periodo']['moneda'] }}"></canvas></div>
+                @if ($dashboard['graficas']['finanzasDisponible'])
+                    <div class="manager-chart-wrap">
+                        <canvas
+                            id="manager-finance-chart"
+                            data-chart="financial"
+                            data-labels='@json($dashboard['finanzas']['serie']['labels'])'
+                            data-income='@json($dashboard['finanzas']['serie']['ingresos'])'
+                            data-expense='@json($dashboard['finanzas']['serie']['egresos'])'
+                            data-currency="{{ $dashboard['finanzas']['moneda'] }}"
+                            aria-label="Gráfica de ingresos y egresos mensuales en {{ $dashboard['finanzas']['moneda'] }}"
+                        ></canvas>
+                    </div>
+                @else
+                    <div class="manager-empty"><strong>Sin movimientos en {{ $dashboard['finanzas']['moneda'] }}</strong>Registra ingresos o egresos en esta moneda para el periodo seleccionado.</div>
+                @endif
             </section>
 
             <section class="manager-section">
                 <header>
                     <div>
                         <h2>Ventas de vehículos</h2>
-                        <p>Vehículos vinculados a ingresos clasificados como venta en el periodo.</p>
+                        <p>Movimientos clasificados como venta de vehículo en el periodo seleccionado.</p>
                     </div>
                 </header>
-                <div class="manager-chart-wrap"><canvas id="manager-sales-chart" aria-label="Vehículos vendidos por mes"></canvas></div>
+                @if ($dashboard['graficas']['ventasDisponible'])
+                    <div class="manager-chart-wrap">
+                        <canvas
+                            id="manager-sales-chart"
+                            data-chart="sales"
+                            data-labels='@json($dashboard['finanzas']['ventas']['labels'])'
+                            data-values='@json($dashboard['finanzas']['ventas']['cantidades'])'
+                            aria-label="Vehículos vendidos por mes"
+                        ></canvas>
+                    </div>
+                @else
+                    <div class="manager-empty"><strong>Sin ventas registradas</strong>Al confirmar una venta, sus vehículos aparecerán en este gráfico.</div>
+                @endif
             </section>
 
             <section class="manager-section">
@@ -199,7 +225,21 @@
                         <p>Venta menos costo registrado por marca en {{ $dashboard['periodo']['moneda'] }}.</p>
                     </div>
                 </header>
-                <div class="manager-chart-wrap"><canvas id="manager-brand-chart" aria-label="Ingresos y utilidad por marca"></canvas></div>
+                @if ($dashboard['graficas']['marcasDisponible'])
+                    <div class="manager-chart-wrap">
+                        <canvas
+                            id="manager-brand-chart"
+                            data-chart="brands"
+                            data-labels='@json($dashboard['finanzas']['rentabilidadMarcas']['labels'])'
+                            data-income='@json($dashboard['finanzas']['rentabilidadMarcas']['ingresos'])'
+                            data-profit='@json($dashboard['finanzas']['rentabilidadMarcas']['utilidad'])'
+                            data-currency="{{ $dashboard['finanzas']['moneda'] }}"
+                            aria-label="Ingresos y utilidad por marca"
+                        ></canvas>
+                    </div>
+                @else
+                    <div class="manager-empty"><strong>Sin ventas vinculadas a vehículos</strong>Registra una venta asociada a un vehículo para comparar las marcas.</div>
+                @endif
             </section>
 
             <section class="manager-section">
@@ -214,7 +254,15 @@
                         <div><strong>{{ number_format($dashboard['inventario']['disponibles'], 0, ',', '.') }}</strong><span>Disponibles en catálogo</span></div>
                         <div><strong>{{ number_format($dashboard['inventario']['noDisponibles'], 0, ',', '.') }}</strong><span>No disponibles en catálogo</span></div>
                     </div>
-                    <div class="manager-chart-wrap"><canvas id="manager-inventory-chart" aria-label="Distribución de inventario por disponibilidad de catálogo"></canvas></div>
+                    <div class="manager-chart-wrap">
+                        <canvas
+                            id="manager-inventory-chart"
+                            data-chart="inventory"
+                            data-available="{{ $dashboard['inventario']['disponibles'] }}"
+                            data-unavailable="{{ $dashboard['inventario']['noDisponibles'] }}"
+                            aria-label="Distribución de inventario por disponibilidad de catálogo"
+                        ></canvas>
+                    </div>
                 @else
                     <div class="manager-empty"><strong>Inventario sin registros físicos</strong>Agrega unidades en el módulo de inventario para actualizar esta sección.</div>
                 @endif
@@ -263,7 +311,7 @@
                 <li>Ingresos y egresos: importes por fecha y moneda seleccionada; no se convierten divisas.</li>
                 <li>Inventario: unidades solo cuando existe un registro de stock asociado al vehículo.</li>
                 <li>Importaciones: se cuentan pedidos; todavía no se asocian a un vehículo.</li>
-                <li>Ventas: movimientos de ingreso categorizados como venta y asociados a un vehículo.</li>
+                <li>Ventas: ingresos clasificados como venta de vehículo; el conteo y el historial permanecen aunque se elimine el vehículo.</li>
                 <li>Cuentas por cobrar/pagar: total de registros clasificados; no se almacenan abonos, saldos ni vencimientos.</li>
                 <li>Utilidad neta: resultado de ingresos menos egresos en la moneda seleccionada; no equivale a cierre contable.</li>
                 <li>Margen por marca: ventas menos costos vinculados al vehículo.</li>
@@ -286,8 +334,8 @@
         customRange();
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        window.addEventListener('load', () => {
         const monthLabels = @json($dashboard['finanzas']['serie']['labels']);
         const currencyCode = @json($dashboard['periodo']['moneda']);
         const moneyFormat = new Intl.NumberFormat('es-CO', {
@@ -295,8 +343,14 @@
             currency: currencyCode,
             maximumFractionDigits: 0,
         });
+        const createManagerChart = (id, config) => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                new Chart(canvas, config);
+            }
+        };
 
-        new Chart(document.getElementById('manager-finance-chart'), {
+        createManagerChart('manager-finance-chart', {
             type: 'bar',
             data: {
                 labels: monthLabels,
@@ -316,7 +370,7 @@
             },
         });
 
-        new Chart(document.getElementById('manager-sales-chart'), {
+        createManagerChart('manager-sales-chart', {
             type: 'bar',
             data: {
                 labels: @json($dashboard['finanzas']['ventas']['labels']),
@@ -333,7 +387,7 @@
             },
         });
 
-        new Chart(document.getElementById('manager-brand-chart'), {
+        createManagerChart('manager-brand-chart', {
             type: 'bar',
             data: {
                 labels: @json($dashboard['finanzas']['rentabilidadMarcas']['labels']),
@@ -345,7 +399,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${moneyFormat.format(context.raw)}` } } },
+                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: context => context.raw === null ? `${context.dataset.label}: Costo no disponible en ${currencyCode}` : `${context.dataset.label}: ${moneyFormat.format(context.raw)}` } } },
                 scales: {
                     x: { ticks: { color: '#a3a3a3' }, grid: { color: '#1f1f1f' } },
                     y: { ticks: { color: '#a3a3a3', callback: value => moneyFormat.format(value) }, grid: { color: '#1f1f1f' } },
@@ -354,7 +408,7 @@
         });
 
         @if ($hayInventario)
-            new Chart(document.getElementById('manager-inventory-chart'), {
+            createManagerChart('manager-inventory-chart', {
                     type: 'doughnut',
                     data: {
                         labels: ['Disponibles en catálogo', 'No disponibles en catálogo'],
@@ -363,5 +417,6 @@
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
                 });
         @endif
+        });
     </script>
 @endsection

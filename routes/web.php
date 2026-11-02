@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\VehiculoController as AdminVehiculoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CitaController;
+use App\Http\Controllers\CitaCompraController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanzaController;
 use App\Http\Controllers\FinanzaWebController;
@@ -138,21 +139,40 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('verification.notice');
     })->middleware(['throttle:6,1']);
 
-    Route::get('/admin/dashboard/gerencial', [DashboardController::class, 'gerencial'])
-        ->name('admin.dashboard.gerencial');
-    Route::get('/admin/dashboard/gerencial/reporte.pdf', [DashboardController::class, 'exportarPdf'])
-        ->name('admin.dashboard.gerencial.pdf');
-    Route::get('/admin/dashboard/gerencial/reporte.csv', [DashboardController::class, 'exportarCsv'])
-        ->name('admin.dashboard.gerencial.csv');
-    Route::redirect('/admin/dashboard/contador', '/admin/dashboard/gerencial')
-        ->name('admin.dashboard.contador');
-    Route::get('/finanzas', [FinanzaWebController::class, 'index'])->name('finanzas.index');
-    Route::get('/finanzas/{transaccion}/editar', [FinanzaWebController::class, 'edit'])->name('finanzas.edit');
-    Route::post('/finanzas', [FinanzaWebController::class, 'store'])->name('finanzas.store');
-    Route::put('/finanzas/{transaccion}', [FinanzaWebController::class, 'update'])->name('finanzas.update');
-    Route::delete('/finanzas/{transaccion}', [FinanzaWebController::class, 'destroy'])->name('finanzas.destroy');
+    Route::middleware('role:externo')->group(function () {
+        Route::get('/catalogo/{vehiculo}/agendar-compra', [CitaCompraController::class, 'create'])
+            ->name('catalogo.compra.create');
+        Route::post('/catalogo/{vehiculo}/agendar-compra', [CitaCompraController::class, 'store'])
+            ->name('catalogo.compra.store');
+        Route::get('/mis-solicitudes-compra', [CitaCompraController::class, 'mine'])
+            ->name('compras.mine');
+    });
 
-    Route::prefix('internacional/vehiculos')
+    Route::middleware('role:jefe,contador')->group(function () {
+        Route::get('/admin/solicitudes-compra', [CitaCompraController::class, 'index'])
+            ->name('admin.compras.index');
+        Route::put('/admin/solicitudes-compra/{cita}/estado', [CitaCompraController::class, 'updateStatus'])
+            ->name('admin.compras.status');
+    });
+
+    Route::middleware('role:jefe,contador')->group(function () {
+        Route::get('/admin/dashboard/gerencial', [DashboardController::class, 'gerencial'])
+            ->name('admin.dashboard.gerencial');
+        Route::get('/admin/dashboard/gerencial/reporte.pdf', [DashboardController::class, 'exportarPdf'])
+            ->name('admin.dashboard.gerencial.pdf');
+        Route::get('/admin/dashboard/gerencial/reporte.csv', [DashboardController::class, 'exportarCsv'])
+            ->name('admin.dashboard.gerencial.csv');
+        Route::redirect('/admin/dashboard/contador', '/admin/dashboard/gerencial')
+            ->name('admin.dashboard.contador');
+        Route::get('/finanzas', [FinanzaWebController::class, 'index'])->name('finanzas.index');
+        Route::get('/finanzas/{transaccion}/editar', [FinanzaWebController::class, 'edit'])->name('finanzas.edit');
+        Route::post('/finanzas', [FinanzaWebController::class, 'store'])->name('finanzas.store');
+        Route::put('/finanzas/{transaccion}', [FinanzaWebController::class, 'update'])->name('finanzas.update');
+        Route::delete('/finanzas/{transaccion}', [FinanzaWebController::class, 'destroy'])->name('finanzas.destroy');
+    });
+
+    Route::middleware('role:jefe,negocios_internacionales')
+        ->prefix('internacional/vehiculos')
         ->name('internacional.vehiculos.')
         ->controller(VehiculoInternacionalController::class)
         ->group(function () {
@@ -170,6 +190,8 @@ Route::middleware(['auth', 'role:jefe,contador'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::post('vehiculos/{vehiculo}/venta', [AdminVehiculoController::class, 'registrarVenta'])
+            ->name('vehiculos.venta');
         Route::resource('vehiculos', AdminVehiculoController::class)->except(['show']);
         // Rutas para generación de PDFs
         Route::get('finanzas/reporte-pdf', [FinanzaController::class, 'descargarReportePDF'])->name('finanzas.reporte.pdf');

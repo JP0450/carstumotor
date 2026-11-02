@@ -18,7 +18,16 @@ class StoreCitaRequest extends FormRequest
             'vehiculo_id' => [
                 'required',
                 'integer',
-                Rule::exists('vehiculos', 'id')->where(fn ($query) => $query->where('disponible', true)),
+                Rule::exists('vehiculos', 'id')->where(function ($query) {
+                    $query->where('disponible', true)
+                        ->whereNotExists(function ($sales) {
+                            $sales->selectRaw('1')
+                                ->from('transacciones_financieras')
+                                ->whereColumn('transacciones_financieras.vehiculo_id', 'vehiculos.id')
+                                ->where('transacciones_financieras.tipo', 'ingreso')
+                                ->where('transacciones_financieras.categoria', 'Venta de vehículo');
+                        });
+                }),
             ],
             'fecha_hora' => ['required', 'date', 'after:now'],
             'motivo' => ['required', 'string', 'min:10', 'max:500'],

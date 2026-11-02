@@ -21,9 +21,11 @@ class CatalogoService
     {
         $vehiculo = $this->vehiculoRepository->findById($id);
 
-        if ($vehiculo) {
-            $vehiculo->makeHidden(['costo_empresa']);
+        if (! $vehiculo || ! $vehiculo->disponible || $vehiculo->ventaRegistrada()->exists()) {
+            return null;
         }
+
+        $vehiculo->makeHidden(['costo_empresa']);
 
         return $vehiculo;
     }

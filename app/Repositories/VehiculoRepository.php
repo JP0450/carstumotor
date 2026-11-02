@@ -20,7 +20,10 @@ class VehiculoRepository implements IVehiculoRepository
 
     public function findAvailable(): Collection
     {
-        return Vehiculo::where('disponible', true)->get();
+        return Vehiculo::query()
+            ->where('disponible', true)
+            ->whereDoesntHave('ventaRegistrada')
+            ->get();
     }
 
     public function create(array $data): Vehiculo
@@ -64,6 +67,10 @@ class VehiculoRepository implements IVehiculoRepository
 
         if (isset($filters['disponible'])) {
             $query->where('disponible', $filters['disponible']);
+
+            if (filter_var($filters['disponible'], FILTER_VALIDATE_BOOLEAN)) {
+                $query->whereDoesntHave('ventaRegistrada');
+            }
         }
 
         return $query->get();

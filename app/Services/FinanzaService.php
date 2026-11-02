@@ -5,14 +5,17 @@ namespace App\Services;
 use App\Interfaces\IFinanzaRepository;
 use App\Models\InformeFinanciero;
 use App\Models\TransaccionFinanciera;
+use App\Models\Vehiculo;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 
 class FinanzaService
 {
     public function __construct(
-        private IFinanzaRepository $finanzaRepository
+        private IFinanzaRepository $finanzaRepository,
+        private FinanzasVehiculosService $finanzasVehiculos
     ) {}
 
     public function subirInforme(array $data): InformeFinanciero
@@ -27,6 +30,22 @@ class FinanzaService
 
     public function registrarTransaccion(array $data): TransaccionFinanciera
     {
+        $data = $this->agregarDatosHistoricosDelVehiculo($data);
+
+        if (
+            $data['tipo'] === 'ingreso'
+            && $data['categoria'] === 'Venta de vehículo'
+            && ! empty($data['vehiculo_id'])
+        ) {
+            return $this->finanzasVehiculos->registrarVenta(
+                Vehiculo::query()->findOrFail($data['vehiculo_id']),
+                (float) $data['monto'],
+                $data['fecha'],
+                $data['user_id'] ?? null,
+                $data['moneda']
+            );
+        }
+
         return $this->finanzaRepository->createTransaccion($data);
     }
 
@@ -82,11 +101,47 @@ class FinanzaService
 
     public function actualizarTransaccion(TransaccionFinanciera $transaccion, array $data): TransaccionFinanciera
     {
+        if (
+            in_array($transaccion->categoria, ['Compra de vehículo', 'Venta de vehículo'], true)
+            && (
+                $data['tipo'] !== $transaccion->tipo
+                || $data['categoria'] !== $transaccion->categoria
+                || (int) ($data['vehiculo_id'] ?? 0) !== (int) ($transaccion->vehiculo_id ?? 0)
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'tipo' => 'No se puede cambiar el origen o el vehículo de una compra o venta registrada automáticamente.',
+            ]);
+        }
+
+        $data = $this->agregarDatosHistoricosDelVehiculo($data);
+
+        if (
+            $data['tipo'] === 'ingreso'
+            && $data['categoria'] === 'Venta de vehículo'
+            && ! empty($data['vehiculo_id'])
+        ) {
+            return $this->finanzasVehiculos->registrarVenta(
+                Vehiculo::query()->findOrFail($data['vehiculo_id']),
+                (float) $data['monto'],
+                $data['fecha'],
+                $transaccion->user_id,
+                $data['moneda'],
+                $transaccion
+            );
+        }
+
         return $this->finanzaRepository->updateTransaccion($transaccion, $data);
     }
 
     public function eliminarTransaccion(TransaccionFinanciera $transaccion): bool
     {
+        if (in_array($transaccion->categoria, ['Compra de vehículo', 'Venta de vehículo'], true)) {
+            throw ValidationException::withMessages([
+                'transaccion' => 'Las compras y ventas de vehículos no se pueden eliminar; corrige sus datos para conservar el historial.',
+            ]);
+        }
+
         return $this->finanzaRepository->deleteTransaccion($transaccion);
     }
 
@@ -216,6 +271,21 @@ class FinanzaService
             'utilidad_operativa' => round($utilidadOperativa, 2),
             'impuestos' => round($impuestos, 2),
             'utilidad_neta' => round($utilidadOperativa - $impuestos, 2),
+        ];
+    }
+
+    private function agregarDatosHistoricosDelVehiculo(array $data): array
+    {
+        if (empty($data['vehiculo_id'])) {
+            return $data;
+        }
+
+        $vehiculo = Vehiculo::query()->findOrFail($data['vehiculo_id']);
+
+        return [
+            ...$data,
+            'vehiculo_referencia' => $vehiculo->id,
+            'vehiculo_marca' => $vehiculo->marca,
         ];
     }
 }

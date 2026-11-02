@@ -20,6 +20,14 @@
         </a>
     </div>
 
+    @if ($errors->any())
+        <div class="errors" role="alert" style="margin-bottom:1rem;">
+            @foreach ($errors->all() as $error)
+                <p>{{ $error }}</p>
+            @endforeach
+        </div>
+    @endif
+
     <div class="card-panel">
         <div class="data-table-wrap">
             <table class="data-table">
@@ -27,11 +35,12 @@
                     <tr>
                         <th>ID</th>
                         <th>Marca / Modelo</th>
-                        <th>Colores</th>
+                        <th>Color</th>
                         <th>Puertas</th>
                         <th>HP</th>
                         <th>Precio cliente</th>
-                        <th>Disponible</th>
+                        <th>Estado</th>
+                        <th>Registrar venta</th>
                         <th style="min-width: 160px;">Acciones</th>
                     </tr>
                 </thead>
@@ -45,10 +54,30 @@
                             <td>{{ $v->hp }}</td>
                             <td>${{ number_format((float) $v->precio_cliente, 0, ',', '.') }}</td>
                             <td>
-                                @if ($v->disponible)
+                                @if ($v->ventaRegistrada)
+                                    <span class="pill pill-no"><i class="fas fa-check"></i> Vendido</span>
+                                @elseif ($v->disponible)
                                     <span class="pill pill-yes"><i class="fas fa-check"></i> Sí</span>
                                 @else
                                     <span class="pill pill-no"><i class="fas fa-eye-slash"></i> No</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($v->ventaRegistrada)
+                                    <span>COP {{ number_format((float) $v->ventaRegistrada->monto, 2, ',', '.') }}</span>
+                                    <small style="display:block;color:#64748b;">{{ $v->ventaRegistrada->fecha->format('d/m/Y') }}</small>
+                                @else
+                                    <form action="{{ route('admin.vehiculos.venta', $v) }}" method="post" style="display:grid;gap:0.4rem;min-width:150px;" onsubmit="return confirm('¿Confirmar la venta y registrar este ingreso financiero?');">
+                                        @csrf
+                                        <label style="font-size:0.8rem;">Precio de venta (COP)
+                                            <input name="monto" type="number" min="0.01" step="0.01" value="{{ $v->precio_cliente }}" required style="width:100%;padding:0.35rem;border:1px solid #cbd5e1;border-radius:6px;">
+                                        </label>
+                                        <label style="font-size:0.8rem;">Fecha
+                                            <input name="fecha" type="date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required style="width:100%;padding:0.35rem;border:1px solid #cbd5e1;border-radius:6px;">
+                                        </label>
+                                        <small style="color:#64748b;">La venta descuenta una unidad del inventario asociado.</small>
+                                        <button type="submit" class="btn-action" style="justify-content:center;">Registrar venta</button>
+                                    </form>
                                 @endif
                             </td>
                             <td>
@@ -71,7 +100,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:2rem;color:#666;">
+                            <td colspan="9" style="text-align:center;padding:2rem;color:#666;">
                                 No hay vehículos registrados. Creá el primero con el botón <strong>Nuevo vehículo</strong>.
                             </td>
                         </tr>

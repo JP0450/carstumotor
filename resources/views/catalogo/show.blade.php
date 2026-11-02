@@ -36,6 +36,22 @@
                     <dd class="mt-1 font-bold text-slate-900">{{ $vehiculo->hp }} HP</dd>
                 </div>
             </dl>
+            @auth
+                @if (auth()->user()->hasRole(\App\Models\User::ROLE_EXTERNO))
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        <a href="{{ route('catalogo.compra.create', $vehiculo) }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 font-black text-white hover:bg-teal-800">
+                            <i class="fas fa-calendar-check"></i> Agendar asesoría de compra
+                        </a>
+                        <a href="{{ route('compras.mine') }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-300 px-5 py-3 font-bold text-slate-800 hover:border-teal-500">
+                            Mis solicitudes
+                        </a>
+                    </div>
+                @endif
+            @else
+                <a href="{{ route('login') }}" class="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 font-black text-white hover:bg-teal-800">
+                    <i class="fas fa-right-to-bracket"></i> Inicia sesión para agendar asesoría
+                </a>
+            @endauth
         </div>
     </article>
 </section>

@@ -12,7 +12,11 @@ class Cita extends Model
 
     protected $fillable = [
         'user_id',
+        'responsable_id',
         'vehiculo_id',
+        'tipo',
+        'nombre_contacto',
+        'telefono_contacto',
         'fecha_hora',
         'motivo',
         'estado',
@@ -33,5 +37,10 @@ class Cita extends Model
     public function vehiculo(): BelongsTo
     {
         return $this->belongsTo(Vehiculo::class);
+    }
+
+    public function responsable(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responsable_id');
     }
 }

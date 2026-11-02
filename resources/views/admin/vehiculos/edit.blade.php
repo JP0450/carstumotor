@@ -68,11 +68,11 @@
                         <input id="hp" name="hp" type="number" min="1" value="{{ old('hp', $vehiculo->hp) }}" required>
                     </div>
                     <div class="field">
-                        <label for="precio_cliente">Precio al cliente</label>
+                        <label for="precio_cliente">Precio al cliente (COP)</label>
                         <input id="precio_cliente" name="precio_cliente" type="number" step="0.01" min="0" value="{{ old('precio_cliente', $vehiculo->precio_cliente) }}" required>
                     </div>
                     <div class="field">
-                        <label for="costo_empresa">Costo empresa</label>
+                        <label for="costo_empresa">Costo de compra para la empresa (COP)</label>
                         <input id="costo_empresa" name="costo_empresa" type="number" step="0.01" min="0" value="{{ old('costo_empresa', $vehiculo->costo_empresa) }}" required>
                     </div>
                     <div class="field full">

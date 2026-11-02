@@ -45,11 +45,12 @@ La terminal muestra una contraseña temporal común para las cuatro cuentas. Cad
 
 1. **Dashboard gerencial:** abre `/admin/dashboard/gerencial`. Deja el periodo en `Mes actual` y la moneda en `COP` para ver las cifras de demostración.
 2. **Finanzas y contabilidad:** abre `/finanzas`. Busca el egreso de transporte vinculado al BMW y despliega `Registrar movimiento financiero` para enseñar el formulario y su vista previa.
-3. **Catálogo:** abre `/catalogo` para recorrer los vehículos y sus ilustraciones.
+3. **Catálogo y solicitud de compra:** inicia como Cliente, abre `/catalogo` y selecciona un vehículo disponible. En su ficha elige **Agendar asesoría de compra**, completa nombre, teléfono y horario preferido, y envía la solicitud. El catálogo excluye vehículos vendidos o marcados como no disponibles.
 4. **Negocios internacionales:** abre `/internacional/vehiculos` para mostrar las fichas y documentos.
-5. **Informes:** desde el dashboard puedes exportar el resumen a PDF o CSV para Excel.
+5. **Bandeja de Contabilidad:** inicia como Contabilidad y abre `/admin/solicitudes-compra` para revisar los datos de contacto y actualizar el estado de la asesoría. El Dashboard y Finanzas están disponibles para Gerencia y Contabilidad; Comercio internacional, para Gerencia y Negocios internacionales.
+6. **Informes:** desde el dashboard puedes exportar el resumen a PDF o CSV para Excel.
 
-Todos los roles autenticados pueden abrir estas pantallas de demostración.
+Las solicitudes quedan asociadas al cliente, al vehículo y a un usuario de Contabilidad con menos solicitudes pendientes. La fecha es una preferencia sujeta a confirmación. Enviar o confirmar la asesoría no registra una venta ni reserva el vehículo: el vehículo solo deja de estar disponible cuando se registra la venta. El perfil Cliente puede consultar el catálogo, ver sus solicitudes y gestionar su perfil. Las operaciones internas se limitan según el rol también en el servidor; ocultar un enlace no es el control de acceso.
 
 ## 4. Consultar y registrar movimientos
 

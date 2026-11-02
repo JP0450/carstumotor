@@ -29,7 +29,9 @@ El script muestra una contraseña temporal aleatoria para estas cuentas locales:
 - `demo.internacional@carstumotor.test`
 - `demo.cliente@carstumotor.test`
 
-Los registros y documentos se identifican como DEMO. Se incluyen ocho vehículos de muestra con ilustraciones SVG locales y livianas (no fotografías de modelos reales), y un egreso de transporte de COP 18.500.000 asociado al BMW M4 de demostración. Los movimientos nuevos guardan moneda y vehículo opcional; los registros históricos sin moneda se conservan como desconocidos. Vuelve a ejecutar el script para levantar la demostración; los datos se conservan y no se duplican.
+Los registros y documentos se identifican como DEMO. Se incluyen ocho vehículos de muestra con ilustraciones SVG locales y livianas (no fotografías de modelos reales), y un egreso de transporte de COP 18.500.000 asociado al BMW M4 de demostración. Los movimientos nuevos guardan moneda y pueden asociarse a un vehículo; una venta de vehículo requiere esa asociación. Las gráficas usan Chart.js empaquetado localmente y no dependen de una CDN.
+
+Al crear un vehículo desde Administración se registra su costo de compra como gasto en COP. Desde el listado se puede confirmar su venta: se registra el ingreso, se marca el vehículo como no disponible y se descuenta una unidad del inventario asociado. Cada registro de vehículo admite una venta. Las migraciones normalizan las compras antiguas identificables y registran el costo de vehículos ya existentes; los movimientos históricos sin moneda que no se puedan identificar se conservan como desconocidos y se excluyen de los totales por moneda. El dashboard y sus exportaciones filtran por periodo y moneda, sin convertir divisas. Vuelve a ejecutar el script de demostración; los datos se conservan y no se duplican.
 - [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.

@@ -12,6 +12,7 @@
             + (int) ($conteos['costo_venta'] ?? 0);
         $conteoCobrar = (int) ($conteos['cuenta_por_cobrar'] ?? 0);
         $conteoPagar = (int) ($conteos['cuenta_por_pagar'] ?? 0);
+        $hayMovimientosMensuales = array_sum($serieMensual['ingresos']) + array_sum($serieMensual['egresos']) > 0;
         $formularioAbierto = $transaccion !== null || $errors->any();
     @endphp
 
@@ -140,13 +141,17 @@
                 </div>
             </div>
             <div class="finance-chart">
-                <canvas
-                    id="finance-monthly-chart"
-                    aria-label="Gráfica mensual de cantidad de ingresos y egresos registrados"
-                    data-labels="{{ json_encode($serieMensual['labels']) }}"
-                    data-income="{{ json_encode($serieMensual['ingresos']) }}"
-                    data-expense="{{ json_encode($serieMensual['egresos']) }}"
-                ></canvas>
+                @if ($hayMovimientosMensuales)
+                    <canvas
+                        id="finance-monthly-chart"
+                        aria-label="Gráfica mensual de cantidad de ingresos y egresos registrados"
+                        data-labels="{{ json_encode($serieMensual['labels']) }}"
+                        data-income="{{ json_encode($serieMensual['ingresos']) }}"
+                        data-expense="{{ json_encode($serieMensual['egresos']) }}"
+                    ></canvas>
+                @else
+                    <div class="finance-empty"><strong>Sin movimientos recientes</strong>Los registros financieros aparecerán aquí al guardarlos.</div>
+                @endif
             </div>
         </section>
 
@@ -220,7 +225,8 @@
                             @error('categoria')<span class="finance-error">{{ $message }}</span>@enderror
                         </label>
                         <label class="finance-field">
-                            Vehículo asociado <span style="font-weight:400;color:#737373;">(opcional)</span>
+                            Vehículo asociado
+                            <span style="font-weight:400;color:#737373;">(obligatorio para registrar una venta de vehículo)</span>
                             <select name="vehiculo_id" id="finance-vehicle">
                                 <option value="">Movimiento general</option>
                                 @foreach ($vehiculos as $vehiculo)
@@ -260,9 +266,10 @@
                             <strong id="finance-preview-description">Sin descripción</strong>
                         </div>
                     </div>
-                    @if ($errors->has('tipo') || $errors->has('monto') || $errors->has('moneda') || $errors->has('vehiculo_id') || $errors->has('descripcion') || $errors->has('fecha') || $errors->has('categoria'))
+                    @if ($errors->has('tipo') || $errors->has('monto') || $errors->has('moneda') || $errors->has('vehiculo_id') || $errors->has('descripcion') || $errors->has('fecha') || $errors->has('categoria') || $errors->has('transaccion'))
                         <p class="finance-error" role="alert">Revisa los campos marcados antes de guardar.</p>
                     @endif
+                    @error('transaccion')<p class="finance-error" role="alert">{{ $message }}</p>@enderror
                     <div class="finance-actions" style="margin-top:.85rem;">
                         <button class="btn-action" type="submit">{{ $transaccion ? 'Guardar cambios' : 'Registrar movimiento' }}</button>
                         @if ($transaccion)
@@ -350,59 +357,62 @@
         </section>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const financeChart = document.getElementById('finance-monthly-chart');
-        new Chart(financeChart, {
-            type: 'bar',
-            data: {
-                labels: JSON.parse(financeChart.dataset.labels),
-                datasets: [
-                    { label: 'Ingresos registrados', data: JSON.parse(financeChart.dataset.income), backgroundColor: '#2563eb', borderRadius: 4 },
-                    { label: 'Egresos registrados', data: JSON.parse(financeChart.dataset.expense), backgroundColor: '#16a34a', borderRadius: 4 },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#a3a3a3' } } },
-                scales: {
-                    x: { ticks: { color: '#a3a3a3' }, grid: { color: '#1f1f1f' } },
-                    y: { beginAtZero: true, ticks: { precision: 0, color: '#a3a3a3' }, grid: { color: '#1f1f1f' } },
-                },
-            },
+        window.addEventListener('load', () => {
+            const financeChart = document.getElementById('finance-monthly-chart');
+            if (financeChart) {
+                new Chart(financeChart, {
+                    type: 'bar',
+                    data: {
+                        labels: JSON.parse(financeChart.dataset.labels),
+                        datasets: [
+                            { label: 'Ingresos registrados', data: JSON.parse(financeChart.dataset.income), backgroundColor: '#2563eb', borderRadius: 4 },
+                            { label: 'Egresos registrados', data: JSON.parse(financeChart.dataset.expense), backgroundColor: '#16a34a', borderRadius: 4 },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#a3a3a3' } } },
+                        scales: {
+                            x: { ticks: { color: '#a3a3a3' }, grid: { color: '#1f1f1f' } },
+                            y: { beginAtZero: true, ticks: { precision: 0, color: '#a3a3a3' }, grid: { color: '#1f1f1f' } },
+                        },
+                    },
+                });
+            }
+
+            const financeForm = document.querySelector('.finance-form');
+            if (financeForm) {
+                const typeInput = financeForm.querySelector('[name="tipo"]');
+                const amountInput = financeForm.querySelector('[name="monto"]');
+                const categoryInput = financeForm.querySelector('[name="categoria"]');
+                const vehicleInput = financeForm.querySelector('[name="vehiculo_id"]');
+                const descriptionInput = financeForm.querySelector('[name="descripcion"]');
+                const amountPreview = document.getElementById('finance-preview-amount');
+
+                const updateFinancePreview = () => {
+                    const currency = financeForm.querySelector('[name="moneda"]:checked')?.value;
+                    const amount = Number(amountInput.value);
+                    const formatter = currency
+                        ? new Intl.NumberFormat('es-CO', { style: 'currency', currency, maximumFractionDigits: 2 })
+                        : null;
+
+                    document.getElementById('finance-preview-type').textContent =
+                        typeInput.options[typeInput.selectedIndex]?.text || 'Tipo pendiente';
+                    amountPreview.textContent = Number.isFinite(amount) && amount > 0 && formatter
+                        ? formatter.format(amount)
+                        : 'Sin valor o moneda';
+                    document.getElementById('finance-preview-category').textContent =
+                        `${categoryInput.value || 'Sin categoría'} · ${vehicleInput.options[vehicleInput.selectedIndex]?.text || 'Movimiento general'}`;
+                    document.getElementById('finance-preview-description').textContent =
+                        descriptionInput.value || 'Sin descripción';
+                };
+
+                financeForm.addEventListener('input', updateFinancePreview);
+                financeForm.addEventListener('change', updateFinancePreview);
+                updateFinancePreview();
+            }
         });
-
-        const financeForm = document.querySelector('.finance-form');
-        if (financeForm) {
-            const typeInput = financeForm.querySelector('[name="tipo"]');
-            const amountInput = financeForm.querySelector('[name="monto"]');
-            const categoryInput = financeForm.querySelector('[name="categoria"]');
-            const vehicleInput = financeForm.querySelector('[name="vehiculo_id"]');
-            const descriptionInput = financeForm.querySelector('[name="descripcion"]');
-            const amountPreview = document.getElementById('finance-preview-amount');
-
-            const updateFinancePreview = () => {
-                const currency = financeForm.querySelector('[name="moneda"]:checked')?.value;
-                const amount = Number(amountInput.value);
-                const formatter = currency
-                    ? new Intl.NumberFormat('es-CO', { style: 'currency', currency, maximumFractionDigits: 2 })
-                    : null;
-
-                document.getElementById('finance-preview-type').textContent =
-                    typeInput.options[typeInput.selectedIndex]?.text || 'Tipo pendiente';
-                amountPreview.textContent = Number.isFinite(amount) && amount > 0 && formatter
-                    ? formatter.format(amount)
-                    : 'Sin valor o moneda';
-                document.getElementById('finance-preview-category').textContent =
-                    `${categoryInput.value || 'Sin categoría'} · ${vehicleInput.options[vehicleInput.selectedIndex]?.text || 'Movimiento general'}`;
-                document.getElementById('finance-preview-description').textContent =
-                    descriptionInput.value || 'Sin descripción';
-            };
-
-            financeForm.addEventListener('input', updateFinancePreview);
-            financeForm.addEventListener('change', updateFinancePreview);
-            updateFinancePreview();
-        }
     </script>
 @endsection

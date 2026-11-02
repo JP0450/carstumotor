@@ -3,22 +3,29 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Vehiculo\RegistrarVentaRequest;
 use App\Interfaces\IVehiculoRepository;
 use App\Models\Vehiculo;
+use App\Services\FinanzasVehiculosService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class VehiculoController extends Controller
 {
     public function __construct(
-        private IVehiculoRepository $vehiculoRepository
+        private IVehiculoRepository $vehiculoRepository,
+        private FinanzasVehiculosService $finanzasVehiculos
     ) {}
 
     public function index(): View
     {
-        $vehiculos = $this->vehiculoRepository->all()->sortByDesc('id')->values();
+        $vehiculos = $this->vehiculoRepository->all()
+            ->load('ventaRegistrada')
+            ->sortByDesc('id')
+            ->values();
 
         return view('admin.vehiculos.index', compact('vehiculos'));
     }
@@ -38,13 +45,16 @@ class VehiculoController extends Controller
             'puertas' => ['required', 'integer', 'min:1', 'max:5'],
             'hp' => ['required', 'integer', 'min:1', 'max:100000'],
             'precio_cliente' => ['required', 'numeric', 'min:0'],
-            'costo_empresa' => ['required', 'numeric', 'min:0'],
+            'costo_empresa' => ['required', 'numeric', 'gt:0'],
             'imagen' => ['nullable', 'string', 'max:255'],
         ]);
 
         $validated['disponible'] = $request->boolean('disponible');
 
-        $this->vehiculoRepository->create($validated);
+        DB::transaction(function () use ($validated, $request): void {
+            $vehiculo = $this->vehiculoRepository->create($validated);
+            $this->finanzasVehiculos->registrarCompra($vehiculo, $request->user()->id);
+        });
 
         return redirect()->route('admin.vehiculos.index')
             ->with('success', 'Vehículo creado correctamente.');
@@ -73,11 +83,29 @@ class VehiculoController extends Controller
         ]);
 
         $validated['disponible'] = $request->boolean('disponible');
+        if ($vehiculo->ventaRegistrada()->exists()) {
+            $validated['disponible'] = false;
+        }
 
         $this->vehiculoRepository->update($vehiculo, $validated);
 
         return redirect()->route('admin.vehiculos.index')
             ->with('success', 'Vehículo actualizado correctamente.');
+    }
+
+    public function registrarVenta(RegistrarVentaRequest $request, Vehiculo $vehiculo): RedirectResponse
+    {
+        $data = $request->validated();
+
+        $this->finanzasVehiculos->registrarVenta(
+            $vehiculo,
+            (float) $data['monto'],
+            $data['fecha'],
+            $request->user()->id
+        );
+
+        return redirect()->route('admin.vehiculos.index')
+            ->with('success', 'Venta registrada en finanzas y vehículo marcado como no disponible.');
     }
 
     public function destroy(Vehiculo $vehiculo): RedirectResponse

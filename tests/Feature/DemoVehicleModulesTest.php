@@ -20,54 +20,101 @@ class DemoVehicleModulesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_all_authenticated_roles_can_open_the_demo_modules(): void
+    public function test_demo_modules_are_limited_to_their_roles(): void
     {
         Storage::fake('local');
-        $this->createVehicle();
+        $vehiculo = $this->createVehicle();
+        $jefe = User::factory()->create(['role' => User::ROLE_JEFE]);
+        $contador = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+        $negocios = User::factory()->create(['role' => User::ROLE_NEGOCIOS]);
+        $cliente = User::factory()->create(['role' => User::ROLE_EXTERNO]);
 
-        foreach (User::roles() as $role) {
-            $user = User::factory()->create(['role' => $role]);
-
+        foreach ([$jefe, $contador] as $user) {
             $this->actingAs($user)
                 ->get(route('admin.dashboard.gerencial'))
                 ->assertOk()
                 ->assertSee('Dashboard gerencial')
-                ->assertSee('Resumen general · Mes actual')
-                ->assertSee('Panel de consulta')
-                ->assertSee('Indicadores adicionales')
-                ->assertSee('0 ingreso(s) · 0 egreso(s) registrados')
-                ->assertDontSee('185.000.000');
+                ->assertSee('Resumen general · Mes actual');
 
-            $this->get(route('finanzas.index'))
-                ->assertOk()
-                ->assertSee('Finanzas y contabilidad')
-                ->assertSee('Registrar movimiento')
-                ->assertSee('Movimientos registrados por mes')
-                ->assertSee('Importes no consolidados');
+            $this->get(route('finanzas.index'))->assertOk();
+        }
 
-            $this->get(route('internacional.vehiculos.index'))
+        foreach ([$jefe, $negocios] as $user) {
+            $this->actingAs($user)
+                ->get(route('internacional.vehiculos.index'))
                 ->assertOk()
                 ->assertSee('Toyota Corolla');
 
-            $vehiculo = Vehiculo::query()->firstOrFail();
             $this->put(route('internacional.vehiculos.update', $vehiculo), ['anio' => 2022])
                 ->assertRedirect(route('internacional.vehiculos.edit', $vehiculo));
-
-            $this->post(route('internacional.vehiculos.documentos.store', $vehiculo), [
-                'tipo' => 'Factura comercial',
-                'archivo' => UploadedFile::fake()->createWithContent('factura-demo.pdf', "%PDF-1.4\nDocumento ficticio\n%%EOF"),
-            ])->assertRedirect(route('internacional.vehiculos.edit', $vehiculo));
         }
 
-        $this->assertDatabaseCount('vehiculo_documentos', count(User::roles()));
+        $this->assertDatabaseHas('vehiculo_informacion_internacional', [
+            'vehiculo_id' => $vehiculo->id,
+            'anio' => 2022,
+        ]);
+
+        $this->assertDatabaseCount('vehiculo_documentos', 0);
     }
 
-    public function test_all_authenticated_roles_can_create_update_and_delete_financial_movements(): void
+    public function test_customer_cannot_access_internal_finance_routes(): void
     {
-        foreach (User::roles() as $role) {
+        $cliente = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+
+        $this->actingAs($cliente)
+            ->get(route('finanzas.index'))
+            ->assertRedirect(route('catalogo'));
+
+        $this->actingAs($cliente)
+            ->post(route('finanzas.store'), [])
+            ->assertRedirect(route('catalogo'));
+
+        $this->assertDatabaseCount('transacciones_financieras', 0);
+    }
+
+    public function test_customer_cannot_access_management_dashboard(): void
+    {
+        $cliente = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+
+        $this->actingAs($cliente)
+            ->get(route('admin.dashboard.gerencial'))
+            ->assertRedirect(route('catalogo'));
+    }
+
+    public function test_customer_cannot_access_international_vehicle_records(): void
+    {
+        $vehiculo = $this->createVehicle();
+        $cliente = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+
+        $this->actingAs($cliente)
+            ->get(route('internacional.vehiculos.index'))
+            ->assertRedirect(route('catalogo'));
+
+        $this->actingAs($cliente)
+            ->put(route('internacional.vehiculos.update', $vehiculo), ['anio' => 2022])
+            ->assertRedirect(route('catalogo'));
+
+        $this->assertDatabaseCount('vehiculo_informacion_internacional', 0);
+    }
+
+    public function test_only_finance_roles_can_create_update_and_delete_financial_movements(): void
+    {
+        $client = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $this->actingAs($client)
+            ->post(route('finanzas.store'), [
+                'tipo' => 'ingreso',
+                'monto' => 125000,
+                'moneda' => 'COP',
+                'descripcion' => 'Movimiento no autorizado',
+                'fecha' => '2026-10-25',
+                'categoria' => 'Venta',
+            ])
+            ->assertRedirect(route('catalogo'));
+        $this->assertDatabaseCount('transacciones_financieras', 0);
+
+        foreach ([User::ROLE_JEFE, User::ROLE_CONTADOR] as $role) {
             $user = User::factory()->create(['role' => $role]);
             $this->actingAs($user);
-
             $this->post(route('finanzas.store'), [
                 'tipo' => 'ingreso',
                 'monto' => 125000,
@@ -111,7 +158,7 @@ class DemoVehicleModulesTest extends TestCase
 
     public function test_financial_movement_form_rejects_negative_or_zero_amounts(): void
     {
-        $user = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
 
         $this->actingAs($user)
             ->post(route('finanzas.store'), [
@@ -295,10 +342,23 @@ class DemoVehicleModulesTest extends TestCase
         }
     }
 
-    public function test_authenticated_roles_can_manage_financial_movements_through_the_api(): void
+    public function test_only_finance_roles_can_manage_financial_movements_through_the_api(): void
     {
         $user = User::factory()->create(['role' => User::ROLE_NEGOCIOS]);
 
+        $response = $this->actingAs($user)->postJson('/api/finanzas/transacciones', [
+            'tipo' => 'ingreso',
+            'monto' => 85000,
+            'moneda' => 'COP',
+            'descripcion' => 'Ingreso API para exposición',
+            'fecha' => '2026-10-25',
+            'categoria' => 'Servicio',
+        ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseCount('transacciones_financieras', 0);
+
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
         $response = $this->actingAs($user)->postJson('/api/finanzas/transacciones', [
             'tipo' => 'ingreso',
             'monto' => 85000,
@@ -368,7 +428,7 @@ class DemoVehicleModulesTest extends TestCase
 
     public function test_manager_dashboard_supports_custom_period_and_exports_summarized_csv(): void
     {
-        $user = User::factory()->create(['role' => User::ROLE_NEGOCIOS]);
+        $user = User::factory()->create(['role' => User::ROLE_JEFE]);
         TransaccionFinanciera::create([
             'tipo' => 'ingreso',
             'monto' => 2500,
@@ -432,7 +492,7 @@ class DemoVehicleModulesTest extends TestCase
 
     public function test_manager_dashboard_rejects_invalid_or_incomplete_date_filters(): void
     {
-        $user = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
 
         $this->actingAs($user)
             ->get(route('admin.dashboard.gerencial', ['periodo' => 'personalizado']))
@@ -508,15 +568,208 @@ class DemoVehicleModulesTest extends TestCase
         ]);
     }
 
+    public function test_creating_a_vehicle_records_the_purchase_and_selling_it_updates_reports(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_JEFE]);
+        $this->actingAs($user);
+
+        $this->post(route('admin.vehiculos.store'), [
+            'marca' => 'Toyota',
+            'modelo' => 'Corolla de prueba',
+            'color' => 'Blanco',
+            'puertas' => 4,
+            'hp' => 140,
+            'precio_cliente' => 45000000,
+            'costo_empresa' => 40000000,
+            'disponible' => 1,
+        ])->assertRedirect(route('admin.vehiculos.index'));
+
+        $vehiculo = Vehiculo::query()->where('modelo', 'Corolla de prueba')->firstOrFail();
+        $compra = TransaccionFinanciera::query()
+            ->where('vehiculo_id', $vehiculo->id)
+            ->where('categoria', 'Compra de vehículo')
+            ->firstOrFail();
+
+        $this->assertSame('gasto', $compra->tipo);
+        $this->assertSame('COP', $compra->moneda);
+        $this->assertSame('40000000.00', $compra->monto);
+        $this->assertSame($vehiculo->id, $compra->vehiculo_referencia);
+        $this->assertSame('Toyota', $compra->vehiculo_marca);
+        $this->assertSame($user->id, $compra->user_id);
+
+        $this->get(route('admin.vehiculos.index'))
+            ->assertOk()
+            ->assertSee('Registrar venta');
+
+        $this->post(route('admin.vehiculos.venta', $vehiculo), [
+            'monto' => 45000000,
+            'fecha' => now()->toDateString(),
+        ])->assertRedirect(route('admin.vehiculos.index'));
+
+        $venta = TransaccionFinanciera::query()
+            ->where('vehiculo_id', $vehiculo->id)
+            ->where('categoria', 'Venta de vehículo')
+            ->firstOrFail();
+
+        $this->assertSame('ingreso', $venta->tipo);
+        $this->assertSame('COP', $venta->moneda);
+        $this->assertSame('45000000.00', $venta->monto);
+        $this->assertFalse($vehiculo->fresh()->disponible);
+
+        $dashboard = app(DashboardGerencialService::class)->obtenerDashboard('mes_actual');
+        $this->assertSame(45000000.0, $dashboard['kpis']['ingresos']['valor']);
+        $this->assertSame(5000000.0, $dashboard['kpis']['utilidad_neta']['valor']);
+        $this->assertSame(1, $dashboard['kpis']['vehiculos_vendidos']['valor']);
+        $this->assertSame(['Toyota'], $dashboard['finanzas']['rentabilidadMarcas']['labels']);
+        $this->assertSame([5000000.0], $dashboard['finanzas']['rentabilidadMarcas']['utilidad']);
+        $this->get(route('admin.dashboard.gerencial'))
+            ->assertOk()
+            ->assertSee('data-chart="financial"', false)
+            ->assertSee('data-chart="sales"', false)
+            ->assertSee('data-chart="brands"', false)
+            ->assertSee('data-profit=', false)
+            ->assertDontSee('cdn.jsdelivr.net/npm/chart.js');
+
+        $this->delete(route('finanzas.destroy', $venta))
+            ->assertSessionHasErrors('transaccion');
+        $this->assertDatabaseHas('transacciones_financieras', ['id' => $venta->id]);
+
+        $this->post(route('admin.vehiculos.venta', $vehiculo), [
+            'monto' => 45000000,
+            'fecha' => now()->toDateString(),
+        ])->assertSessionHasErrors('vehiculo');
+
+        $this->delete(route('admin.vehiculos.destroy', $vehiculo))
+            ->assertRedirect(route('admin.vehiculos.index'));
+
+        $this->assertDatabaseHas('transacciones_financieras', [
+            'id' => $venta->id,
+            'vehiculo_id' => null,
+            'vehiculo_referencia' => $vehiculo->id,
+            'vehiculo_marca' => 'Toyota',
+        ]);
+        $dashboardTrasEliminarVehiculo = app(DashboardGerencialService::class)->obtenerDashboard('mes_actual');
+        $this->assertSame(1, $dashboardTrasEliminarVehiculo['kpis']['vehiculos_vendidos']['valor']);
+        $this->assertSame(['Toyota'], $dashboardTrasEliminarVehiculo['finanzas']['rentabilidadMarcas']['labels']);
+    }
+
+    public function test_vehicle_creation_through_the_api_also_records_its_purchase(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+
+        $response = $this->actingAs($user)->postJson('/api/vehiculos', [
+            'marca' => 'Mazda',
+            'modelo' => 'CX-30 de prueba',
+            'color' => 'Rojo',
+            'puertas' => 5,
+            'hp' => 155,
+            'precio_cliente' => 60000000,
+            'costo_empresa' => 52000000,
+            'disponible' => true,
+        ]);
+
+        $response->assertCreated();
+        $vehiculoId = $response->json('id');
+
+        $this->assertDatabaseHas('transacciones_financieras', [
+            'tipo' => 'gasto',
+            'monto' => 52000000,
+            'moneda' => 'COP',
+            'categoria' => 'Compra de vehículo',
+            'vehiculo_id' => $vehiculoId,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_registering_a_vehicle_sale_from_finances_marks_the_vehicle_unavailable(): void
+    {
+        $vehiculo = $this->createVehicle();
+        $inventario = Inventario::create(['vehiculo_id' => $vehiculo->id, 'cantidad' => 3]);
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+
+        $this->actingAs($user)
+            ->post(route('finanzas.store'), [
+                'tipo' => 'ingreso',
+                'monto' => 60000000,
+                'moneda' => 'COP',
+                'vehiculo_id' => $vehiculo->id,
+                'descripcion' => 'Venta de vehículo confirmada al cliente',
+                'fecha' => now()->toDateString(),
+                'categoria' => 'Venta de vehículo',
+            ])
+            ->assertRedirect(route('finanzas.index'));
+
+        $this->assertFalse($vehiculo->fresh()->disponible);
+        $this->assertSame(2, $inventario->fresh()->cantidad);
+        $this->assertDatabaseHas('transacciones_financieras', [
+            'tipo' => 'ingreso',
+            'categoria' => 'Venta de vehículo',
+            'vehiculo_id' => $vehiculo->id,
+            'monto' => 60000000,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_vehicle_sales_cannot_be_recorded_as_unlinked_financial_movements(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+
+        $this->actingAs($user)
+            ->post(route('finanzas.store'), [
+                'tipo' => 'ingreso',
+                'monto' => 60000000,
+                'moneda' => 'COP',
+                'descripcion' => 'Venta sin vehículo asociado',
+                'fecha' => now()->toDateString(),
+                'categoria' => 'Venta de vehículo',
+            ])
+            ->assertSessionHasErrors('vehiculo_id');
+    }
+
+    public function test_changing_a_financial_movement_to_a_vehicle_sale_updates_inventory_and_availability(): void
+    {
+        $vehiculo = $this->createVehicle();
+        $inventario = Inventario::create(['vehiculo_id' => $vehiculo->id, 'cantidad' => 2]);
+        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+        $movimiento = TransaccionFinanciera::create([
+            'tipo' => 'ingreso',
+            'monto' => 1000,
+            'moneda' => 'COP',
+            'vehiculo_id' => $vehiculo->id,
+            'descripcion' => 'Ingreso pendiente de clasificar',
+            'fecha' => now()->toDateString(),
+            'categoria' => 'Otros',
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('finanzas.update', $movimiento), [
+                'tipo' => 'ingreso',
+                'monto' => 60000000,
+                'moneda' => 'COP',
+                'vehiculo_id' => $vehiculo->id,
+                'descripcion' => 'Venta confirmada al cliente',
+                'fecha' => now()->toDateString(),
+                'categoria' => 'Venta de vehículo',
+            ])
+            ->assertRedirect(route('finanzas.index'));
+
+        $this->assertSame('Venta de vehículo', $movimiento->fresh()->categoria);
+        $this->assertFalse($vehiculo->fresh()->disponible);
+        $this->assertSame(1, $inventario->fresh()->cantidad);
+    }
+
     public function test_vehicle_international_information_and_private_pdf_documents_can_be_managed(): void
     {
         Storage::fake('local');
         $vehiculo = $this->createVehicle();
-        $user = User::factory()->create(['role' => User::ROLE_EXTERNO]);
+        $user = User::factory()->create(['role' => User::ROLE_NEGOCIOS]);
         $this->actingAs($user);
 
         $this->get(route('internacional.vehiculos.edit', $vehiculo))
             ->assertOk()
+            ->assertSee('Volver a la lista')
+            ->assertSee(route('internacional.vehiculos.index'))
             ->assertSee('Ficha del vehículo')
             ->assertSee('Información del vehículo')
             ->assertSee('Información comercial')
@@ -595,7 +848,7 @@ class DemoVehicleModulesTest extends TestCase
     public function test_document_categories_and_pdf_files_are_validated(): void
     {
         $vehiculo = $this->createVehicle();
-        $user = User::factory()->create(['role' => User::ROLE_CONTADOR]);
+        $user = User::factory()->create(['role' => User::ROLE_NEGOCIOS]);
 
         $this->actingAs($user)
             ->post(route('internacional.vehiculos.documentos.store', $vehiculo), [

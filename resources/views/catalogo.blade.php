@@ -11,11 +11,18 @@
         </p>
         @auth
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('admin.dashboard.gerencial') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-chart-line"></i> Dashboard gerencial</a>
-                    <a href="{{ route('internacional.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-globe"></i> Comercio internacional</a>
-                    @php $isAdmin = in_array(strtolower(trim(auth()->user()->role ?? '')), [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_CONTADOR], true); @endphp
-                    @if($isAdmin)
-                    <a href="{{ route('admin.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-clipboard-list"></i> CRUD vehículos</a>
+                    @php
+                        $role = strtolower(trim(auth()->user()->role ?? ''));
+                        $canAccessFinance = in_array($role, [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_CONTADOR], true);
+                        $canAccessInternational = in_array($role, [\App\Models\User::ROLE_JEFE, \App\Models\User::ROLE_NEGOCIOS], true);
+                    @endphp
+                    @if($canAccessFinance)
+                        <a href="{{ route('admin.dashboard.gerencial') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-teal-500 to-amber-400 text-slate-900 font-black"><i class="fas fa-chart-line"></i> Dashboard gerencial</a>
+                        <a href="{{ route('admin.compras.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-calendar-check"></i> Solicitudes de compra</a>
+                        <a href="{{ route('admin.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-clipboard-list"></i> Gestionar vehículos</a>
+                    @endif
+                    @if($canAccessInternational)
+                        <a href="{{ route('internacional.vehiculos.index') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 font-bold hover:bg-white/15"><i class="fas fa-globe"></i> Comercio internacional</a>
                     @endif
                 </div>
         @endauth

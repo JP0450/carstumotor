@@ -17,3 +17,8 @@
     --color-warm-400: #fbbf24;
     --color-warm-500: #f59e0b;
 }
+
+.user-menu-dropdown {
+    right: 0;
+    max-width: calc(100vw - 2rem);
+}
